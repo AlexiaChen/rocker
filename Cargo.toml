@@ -1,8 +1,18 @@
-[package]
-name = "mini-docker-rs"
-version = "0.1.0"
-edition = "2018"
+[workspace]
+members = [
+  "cgroups",
+  "container",
+  "network",
+  "namespace",
+  "rocker",
+]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+overflow-checks = true
+panic = "unwind"
 
-[dependencies]
+[profile.release]
+incremental = false
+lto = true
+overflow-checks = false
+panic = "unwind"
