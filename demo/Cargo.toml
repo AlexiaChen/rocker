@@ -1,0 +1,34 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+unshare = "0.7.0"
+
+[[bin]]
+name = "uts"
+path = "src/uts.rs"
+
+[[bin]]
+name = "pid"
+path = "src/pid.rs"
+
+[[bin]]
+name = "ipc"
+path = "src/ipc.rs"
+
+[[bin]]
+name = "mount"
+path = "src/mount.rs"
+
+[[bin]]
+name = "user"
+path = "src/user.rs"
+
+[[bin]]
+name = "network"
+path = "src/network.rs"
+

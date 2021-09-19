@@ -1,4 +1,5 @@
 [package]
+authors = ["MathxH Chen <brainfvck@foxmail.com>"]
 name = "namespace"
 version = "0.1.0"
 edition = "2018"

@@ -5,6 +5,7 @@ members = [
   "network",
   "namespace",
   "rocker",
+  "demo",
 ]
 
 [profile.dev]
