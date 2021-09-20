@@ -2,7 +2,7 @@
 
 It is a feature provided by the Linux kernel that isolates a range of system resources such as PID (Process ID), User ID, Network, etc.
 
-For example, if you use the namespace API to do UID-level isolation, that is, you can virtualize a namespace with a UID of n. In this namespace, the user has root privileges. But on the real physical machine, he is still the same user with UID n. This solves the isolation problem between users. By analogy, using namespace for PID level isolation, it is like each namespace is like a separate Linux computer, with its own init process (PID 1), and the PIDs of other processes are incremented in turn. For example, a parent namespace creates two child namespaces, and both child namespaces have init processes with PID 1. The processes of the child namespaces are mapped to the processes of the parent namespace, and the parent namespace can know the running state of each child namespace, while the child namespaces are isolated from each other.
+For example, if you use the namespace API to do UID-level isolation, that is, you can virtualize a namespace with a UID of n. In this namespace, the user has root privileges. But on the real physical machine, it is still the same user with UID n. This solves the isolation problem between users. By analogy, using namespace for PID level isolation, it is like each namespace is like a separate Linux computer, with its own init process (PID 1), and the PIDs of other processes are incremented in turn. For example, a parent namespace creates two child namespaces, and both child namespaces have init processes with PID 1. The processes of the child namespaces are mapped to the processes of the parent namespace, and the parent namespace can know the running state of each child namespace, while the child namespaces are isolated from each other.
 
 Currently Linux provides 6 different types of Namespace:
 
@@ -26,4 +26,10 @@ The UTS namespace is mainly used to isolate the nodename and domainname system i
 ## IPC
 
 The IPC namespace is used to isolate the System V IPC and POSIX message queues. Each IPC namespace has its own System V IPC and POXIS message queues.
+
+## PID
+
+The PID namespace is used to isolate process IDs. It is understandable that inside the docker container, using ps -ef, you will often find that inside the container, the process running in the foreground has PID 1, but outside the container, using ps -ef, you will find that the same process has a different PID, and this is the PID namespace to do This is what the PID namespace does.
+
+## Mount
 

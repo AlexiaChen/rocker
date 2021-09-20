@@ -242,18 +242,74 @@
 
 // mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns
 // [sudo] password for mathxh:
-// $ echo $$
-// 1       
+// $ echo $$                       // means show current PID
+// 1  
+
+// Mount
+// 
+// mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns
+// # echo $$
+// 1
+// # ls /proc
+// 1    14    1588  201  73  91   993        bus        consoles  diskstats    filesystems  ioports   key-users    kpagecount  mdstat   mounts        partitions   softirqs  sysvipc      uptime       zoneinfo
+// 117  1584  161   332  88  97   994        cgroups    cpuinfo   dma          fs           irq       keys         kpageflags  meminfo  mtrr          sched_debug  stat      thread-self  version
+// 12   1585  172   361  89  99   acpi       cmdline    crypto    driver       interrupts   kallsyms  kmsg         loadavg     misc     net           schedstat    swaps     timer_list   vmallocinfo
+// 13   1586  189   425  90  992  buddyinfo  config.gz  devices   execdomains  iomem        kcore     kpagecgroup  locks       modules  pagetypeinfo  self         sys       tty          vmstat
+// # mount -t proc proc /proc
+// # ls /proc
+// 1     buddyinfo  cmdline    cpuinfo  diskstats  execdomains  interrupts  irq       key-users  kpagecgroup  loadavg  meminfo  mounts  pagetypeinfo  schedstat  stat   sysvipc      tty      vmallocinfo
+// 4     bus        config.gz  crypto   dma        filesystems  iomem       kallsyms  keys       kpagecount   locks    misc     mtrr    partitions    self       swaps  thread-self  uptime   vmstat
+// acpi  cgroups    consoles   devices  driver     fs           ioports     kcore     kmsg       kpageflags   mdstat   modules  net     sched_debug   softirqs   sys    timer_list   version  zoneinfo
+// # ps -ef
+// UID        PID  PPID  C STIME TTY          TIME CMD
+// root         1     0  0 20:12 pts/1    00:00:00 /bin/sh
+// root         5     1  0 20:13 pts/1    00:00:00 ps -ef
+
+//////////////////////////////  User
+// mathxh@MathxH:~/Project/rocker/target/debug$ su root
+// Password:
+// root@MathxH:/home/mathxh/Project/rocker/target/debug# id
+// uid=0(root) gid=0(root) groups=0(root)
+// root@MathxH:/home/mathxh/Project/rocker/target/debug# ./ns
+// $ id
+// uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
+// $
 
 use unshare::{Command, Namespace, UidMap, GidMap};
-
+use std::{env};
+const ROOT_PRV : u32 = 0;
+const NO_ROOT_PRV :u32 = 1;
 fn main() {
-    let cmd_result = Command::new("/bin/sh")
-    .unshare(&[Namespace::Uts, Namespace::Ipc, Namespace::Pid, Namespace::Mount, Namespace::User, Namespace::Net])
-    .set_id_maps(vec![UidMap{inside_uid:1, outside_uid:0, count: 1}], vec![GidMap{inside_gid:1, outside_gid:0, count: 1}])
-    .status();
-
-    if cmd_result.is_err() {
-        println!("error is: {}", cmd_result.err().unwrap() )
+    if env::args().len() != 2 {
+        println!("usage: ./ns 0(root in container) or ./ns 1(no root in container)");
+        return
     }
+    
+    let mut enable_root = false;
+    let arg1 = env::args().nth(1).unwrap();
+    if arg1 == "0" {
+        enable_root = true;
+    } 
+
+    if enable_root {
+        let cmd_result = Command::new("/bin/sh")
+        .unshare(&[Namespace::Uts, Namespace::Ipc, Namespace::Pid, Namespace::Mount, Namespace::User, Namespace::Net])
+        .set_id_maps(vec![UidMap{inside_uid:ROOT_PRV, outside_uid:ROOT_PRV, count: 1}], vec![GidMap{inside_gid:ROOT_PRV, outside_gid:ROOT_PRV, count: 1}])
+        .status();
+    
+        if cmd_result.is_err() {
+            println!("error is: {}", cmd_result.err().unwrap() )
+        }
+    } else {
+        let cmd_result = Command::new("/bin/sh")
+        .unshare(&[Namespace::Uts, Namespace::Ipc, Namespace::Pid, Namespace::Mount, Namespace::User, Namespace::Net])
+        .set_id_maps(vec![UidMap{inside_uid:NO_ROOT_PRV, outside_uid:NO_ROOT_PRV, count: 1}], vec![GidMap{inside_gid:NO_ROOT_PRV, outside_gid:NO_ROOT_PRV, count: 1}])
+        .status();
+    
+        if cmd_result.is_err() {
+            println!("error is: {}", cmd_result.err().unwrap() )
+        }
+    }
+
+   
 }
