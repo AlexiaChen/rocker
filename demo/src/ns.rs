@@ -1,3 +1,4 @@
+///////////////////////////////////////////////////////// UTS
 // mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns
 // $ pstree -pl
 // init(1)─┬─init(12)───init(13)─┬─bash(14)───sudo(6780)───ns(6781)───sh(6782)───pstree(6831)
@@ -111,7 +112,7 @@
 // $ readlink /proc/6782/ns/uts
 // uts:[4026532204]
 
-
+//////////////////////////////////////////////  IPC
 // mathxh@MathxH:~$ ipcs -q
 
 // ------ Message Queues --------
@@ -132,17 +133,127 @@
 // ------ Message Queues --------
 // key        msqid      owner      perms      used-bytes   messages
 
+/////////////////////////////////////////////////////////////////// PID
+// mathxh@MathxH:~$ pstree -pl
+// init(1)─┬─init(12)───init(13)─┬─bash(14)───sudo(1465)───ns(1466)───sh(1467)
+//         │                     └─sshd(73)
+//         ├─init(88)───init(89)───sh(90)───sh(91)───sh(97)───node(99)─┬─node(114)─┬─{node}(115)
+//         │                                                           │           ├─{node}(116)
+//         │                                                           │           ├─{node}(117)
+//         │                                                           │           ├─{node}(118)
+//         │                                                           │           ├─{node}(119)
+//         │                                                           │           ├─{node}(121)
+//         │                                                           │           ├─{node}(136)
+//         │                                                           │           ├─{node}(138)
+//         │                                                           │           ├─{node}(139)
+//         │                                                           │           └─{node}(140)
+//         │                                                           ├─node(194)─┬─node(715)─┬─{node}(716)
+//         │                                                           │           │           ├─{node}(717)
+//         │                                                           │           │           ├─{node}(718)
+//         │                                                           │           │           ├─{node}(719)
+//         │                                                           │           │           ├─{node}(720)
+//         │                                                           │           │           └─{node}(721)
+//         │                                                           │           ├─rust-analyzer-x(263)─┬─rust-analyzer-x(304)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(268)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(269)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(274)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(275)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(276)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(277)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(278)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(279)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(280)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(281)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(282)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(334)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(659)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(660)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(661)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(662)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(663)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(664)
+//         │                                                           │           │                      ├─{rust-analyzer-x}(665)
+//         │                                                           │           │                      └─{rust-analyzer-x}(666)
+//         │                                                           │           ├─{node}(195)
+//         │                                                           │           ├─{node}(196)
+//         │                                                           │           ├─{node}(197)
+//         │                                                           │           ├─{node}(198)
+//         │                                                           │           ├─{node}(199)
+//         │                                                           │           ├─{node}(200)
+//         │                                                           │           ├─{node}(201)
+//         │                                                           │           ├─{node}(202)
+//         │                                                           │           ├─{node}(203)
+//         │                                                           │           ├─{node}(204)
+//         │                                                           │           └─{node}(216)
+//         │                                                           ├─node(205)─┬─{node}(206)
+//         │                                                           │           ├─{node}(207)
+//         │                                                           │           ├─{node}(208)
+//         │                                                           │           ├─{node}(209)
+//         │                                                           │           ├─{node}(210)
+//         │                                                           │           ├─{node}(211)
+//         │                                                           │           ├─{node}(212)
+//         │                                                           │           ├─{node}(213)
+//         │                                                           │           ├─{node}(214)
+//         │                                                           │           └─{node}(215)
+//         │                                                           ├─node(941)─┬─gopls(1042)─┬─{gopls}(1044)
+//         │                                                           │           │             ├─{gopls}(1045)
+//         │                                                           │           │             ├─{gopls}(1046)
+//         │                                                           │           │             ├─{gopls}(1047)
+//         │                                                           │           │             ├─{gopls}(1048)
+//         │                                                           │           │             ├─{gopls}(1057)
+//         │                                                           │           │             ├─{gopls}(1067)
+//         │                                                           │           │             ├─{gopls}(1068)
+//         │                                                           │           │             ├─{gopls}(1069)
+//         │                                                           │           │             ├─{gopls}(1070)
+//         │                                                           │           │             └─{gopls}(1071)
+//         │                                                           │           ├─{node}(942)
+//         │                                                           │           ├─{node}(943)
+//         │                                                           │           ├─{node}(944)
+//         │                                                           │           ├─{node}(945)
+//         │                                                           │           ├─{node}(946)
+//         │                                                           │           ├─{node}(947)
+//         │                                                           │           ├─{node}(948)
+//         │                                                           │           ├─{node}(949)
+//         │                                                           │           ├─{node}(950)
+//         │                                                           │           ├─{node}(951)
+//         │                                                           │           └─{node}(963)
+//         │                                                           ├─node(952)─┬─{node}(953)
+//         │                                                           │           ├─{node}(954)
+//         │                                                           │           ├─{node}(955)
+//         │                                                           │           ├─{node}(956)
+//         │                                                           │           ├─{node}(957)
+//         │                                                           │           ├─{node}(958)
+//         │                                                           │           ├─{node}(959)
+//         │                                                           │           ├─{node}(960)
+//         │                                                           │           ├─{node}(961)
+//         │                                                           │           └─{node}(962)
+//         │                                                           ├─{node}(104)
+//         │                                                           ├─{node}(105)
+//         │                                                           ├─{node}(106)
+//         │                                                           ├─{node}(107)
+//         │                                                           ├─{node}(108)
+//         │                                                           ├─{node}(109)
+//         │                                                           ├─{node}(110)
+//         │                                                           ├─{node}(111)
+//         │                                                           ├─{node}(112)
+//         │                                                           └─{node}(113)
+//         ├─init(821)───init(822)───bash(823)───pstree(1468)
+//         └─{init}(8)
+
+// mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns
+// [sudo] password for mathxh:
+// $ echo $$
+// 1       
+
 use unshare::{Command, Namespace, UidMap, GidMap};
 
 fn main() {
-    
     let cmd_result = Command::new("/bin/sh")
-    .unshare(&[Namespace::Uts, Namespace::Ipc, Namespace::Pid])
+    .unshare(&[Namespace::Uts, Namespace::Ipc, Namespace::Pid, Namespace::Mount, Namespace::User, Namespace::Net])
     .set_id_maps(vec![UidMap{inside_uid:1, outside_uid:0, count: 1}], vec![GidMap{inside_gid:1, outside_gid:0, count: 1}])
     .status();
 
     if cmd_result.is_err() {
         println!("error is: {}", cmd_result.err().unwrap() )
     }
-
 }
