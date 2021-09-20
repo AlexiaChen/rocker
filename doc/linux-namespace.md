@@ -18,3 +18,12 @@ The Namespace API uses three main system calls as follows:
 - clone() to create a new process. The system call parameters determine which types of namespaces are created and their children are included in these namespaces
 - unshare() removes a process from a namespace
 - setns() adds the process to the namespace
+
+## UTS
+
+The UTS namespace is mainly used to isolate the nodename and domainname system identifiers. In the UTS namespace, each namespace is allowed to have its own hostname.
+
+## IPC
+
+The IPC namespace is used to isolate the System V IPC and POSIX message queues. Each IPC namespace has its own System V IPC and POXIS message queues.
+

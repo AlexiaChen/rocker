@@ -1,4 +1,4 @@
-# mini-docker-rs
+# Rocker
 
 Implementation of docker in Rust. 
 

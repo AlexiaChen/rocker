@@ -9,26 +9,6 @@ edition = "2018"
 unshare = "0.7.0"
 
 [[bin]]
-name = "uts"
-path = "src/uts.rs"
-
-[[bin]]
-name = "pid"
-path = "src/pid.rs"
-
-[[bin]]
-name = "ipc"
-path = "src/ipc.rs"
-
-[[bin]]
-name = "mount"
-path = "src/mount.rs"
-
-[[bin]]
-name = "user"
-path = "src/user.rs"
-
-[[bin]]
-name = "network"
-path = "src/network.rs"
+name = "ns"
+path = "src/ns.rs"
 
