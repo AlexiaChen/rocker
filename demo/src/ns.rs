@@ -1,6 +1,3 @@
-use unshare::{Command, Namespace, UidMap, GidMap};
-
-
 // mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns
 // $ pstree -pl
 // init(1)─┬─init(12)───init(13)─┬─bash(14)───sudo(6780)───ns(6781)───sh(6782)───pstree(6831)
@@ -134,6 +131,8 @@ use unshare::{Command, Namespace, UidMap, GidMap};
 
 // ------ Message Queues --------
 // key        msqid      owner      perms      used-bytes   messages
+
+use unshare::{Command, Namespace, UidMap, GidMap};
 
 fn main() {
     
