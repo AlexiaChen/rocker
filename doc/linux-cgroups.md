@@ -62,3 +62,139 @@ Cgroups is achieved through the interworking of these three components.
 
 ## Kernel interface for Cgroups
 
+To make the configuration of cgroups more intuitive, Kernel configures cgroups through a virtual tree file system, and virtualizes the cgroup tree through a hierarchy of directories, which is exactly adapted to the organization of hierarchy.
+
+1. First create and hang on a hierarchy (cgroup tree).
+
+```bash
+mathxh@MathxH:~$ mkdir cgroup-test
+mathxh@MathxH:~$ sudo mount -t cgroup -o none,name=cgroup-test cgroup-test . /cgroup-test/
+[sudo] password for mathxh:
+mathxh@MathxH:~$ ls . /cgroup-test/
+cgroup.clone_children cgroup.procs cgroup.sane_behavior notify_on_release release_agent tasks
+mathxh@MathxH:~$
+```
+These files in the cgroup-test folder are the configuration items for the cgroup root node in this hierarchy.
+
+- cgroup.clone_children, the subsystem of cpuset will read this configuration file, if this value is 1 (default is 0), only the child cgroup will inherit the cpuset configuration of the parent cgroup
+- cgroup.procs, is the process group ID of the current cgroup node in the tree, the current position is the root node, this file will have the IDs of all process groups in the system now
+- notify_on_release, release_agent, these two are used together, the former identifies whether the last process of the current cgroup has executed release_agent when it exits, the former is a path that is usually used to automatically clean up the cgroup that is no longer in use after the process exits
+- tasks, identifies the process IDs under the cgroup, if a process ID is written to the tasks file, the corresponding process will be added to the cgroup
+
+2. Then, expand two more sub-cgroups under the root of the cgroup you just created:
+
+```bash
+mathxh@MathxH:~/cgroup-test$ sudo mkdir cgroup1
+mathxh@MathxH:~/cgroup-test$ sudo mkdir cgroup2
+mathxh@MathxH:~/cgroup-test$ tree .
+.
+├── cgroup.clone_children
+├── cgroup.procs
+├─ cgroup.sane_behavior
+├─ cgroup1
+│ ├── cgroup.clone_children
+│ ├── cgroup.procs
+│ ├── notify_on_release
+│ └─ tasks
+├─ cgroup2
+│ ├── cgroup.clone_children
+│ ├── cgroup.procs
+│ ├── notify_on_release
+│ └─ tasks
+├── notify_on_release
+├── release_agent
+└── tasks
+
+2 directories, 14 files
+```
+
+As you can see, when you create a folder in a cgroup's directory, the kernel will mark the folder as a child cgroup of the cgroup, and they will inherit the properties of the parent cgroup
+
+3. Adding and moving processes in a cgroup
+
+A process in a cgroups hierarchy can only exist on one cgroup node, all processes of the system will exist on the root node by default, you can move the process to other cgroup nodes, just write the process ID to the tasks file of the cgroup node you move to.
+
+```bash
+mathxh@MathxH:~/cgroup-test/cgroup1$ echo $$
+3923
+mathxh@MathxH:~/cgroup-test/cgroup1$ sudo sh -c "echo $$ >> tasks"
+mathxh@MathxH:~/cgroup-test/cgroup1$ cat /proc/3923/cgroup
+14:name=cgroup-test:/cgroup1
+13:rdma:/
+12:pids:/
+11:hugetlb:/
+10:net_prio:/
+9:perf_event:/
+8:net_cls:/
+7:freezer:/
+6:devices:/
+5:memory:/
+4:blkio:/
+3:cpuacct:/
+2:cpu:/
+1:cpuset:/
+0::/
+```
+
+As you can see, the current process 3923 has been added to cgroup-test:/cgroup-1, of course, you can move it to the tasks file of cgroup2, so repeat the above steps, and it will end up in cgroup2, very convenient operation.
+
+4. Limit the resources of processes in cgroup by subsystem
+
+When the hierarchy was created, the hierarchy was not associated with any subsystem, so there was no way to limit the resource usage of the processes through the cgroup node in the hierarchy, but the system has already created a default hierarchy for each subsystem by default:
+
+
+```bash
+mathxh@MathxH:~$ mount | grep memory
+cgroup on /sys/fs/cgroup/memory type cgroup (rw,nosuid,nodev,noexec,relatime,memory)
+mathxh@MathxH:~$ mount | grep cgroup
+tmpfs on /sys/fs/cgroup type tmpfs (rw,nosuid,nodev,noexec,relatime,mode=755)
+cgroup2 on /sys/fs/cgroup/unified type cgroup2 (rw,nosuid,nodev,noexec,relatime,nsdelegate)
+cgroup on /sys/fs/cgroup/cpuset type cgroup (rw,nosuid,nodev,noexec,relatime,cpuset)
+cgroup on /sys/fs/cgroup/cpu type cgroup (rw,nosuid,nodev,noexec,relatime,cpu)
+cgroup on /sys/fs/cgroup/cpuacct type cgroup (rw,nosuid,nodev,noexec,relatime,cpuacct)
+cgroup on /sys/fs/cgroup/blkio type cgroup (rw,nosuid,nodev,noexec,relatime,blkio)
+cgroup on /sys/fs/cgroup/memory type cgroup (rw,nosuid,nodev,noexec,relatime,memory)
+cgroup on /sys/fs/cgroup/devices type cgroup (rw,nosuid,nodev,noexec,relatime,devices)
+cgroup on /sys/fs/cgroup/freezer type cgroup (rw,nosuid,nodev,noexec,relatime,freezer)
+cgroup on /sys/fs/cgroup/net_cls type cgroup (rw,nosuid,nodev,noexec,relatime,net_cls)
+cgroup on /sys/fs/cgroup/perf_event type cgroup (rw,nosuid,nodev,noexec,relatime,perf_event)
+cgroup on /sys/fs/cgroup/net_prio type cgroup (rw,nosuid,nodev,noexec,relatime,net_prio)
+cgroup on /sys/fs/cgroup/hugetlb type cgroup (rw,nosuid,nodev,noexec,relatime,hugetlb)
+cgroup on /sys/fs/cgroup/pids type cgroup (rw,nosuid,nodev,noexec,relatime,pids)
+cgroup on /sys/fs/cgroup/rdma type cgroup (rw,nosuid,nodev,noexec,relatime,rdma)
+cgroup-test on /home/mathxh/cgroup-test type cgroup (rw,relatime,name=cgroup-test)
+```
+
+You can see that the /sys/fs/cgroup/memory directory is the hierarchy on which the memory subsystem is hooked up. You can limit the memory consumption of processes by creating a cgroup in this hierarchy. Before testing, download a memory consumption command line tool `sudo apt install stress`.
+
+```bash
+mathxh@MathxH:~$ cd /sys/fs/cgroup/memory
+mathxh@MathxH:/sys/fs/cgroup/memory$ sudo mkdir test-limit-memory && cd test-limit-memory
+[sudo] password for mathxh:
+mathxh@MathxH:/sys/fs/cgroup/memory/test-limit-memory$ ls
+cgroup.clone_children  memory.force_empty              memory.kmem.tcp.failcnt             memory.kmem.usage_in_bytes  memory.memsw.limit_in_bytes      memory.oom_control          memory.swappiness      tasks
+cgroup.event_control   memory.kmem.failcnt             memory.kmem.tcp.limit_in_bytes      memory.limit_in_bytes       memory.memsw.max_usage_in_bytes  memory.pressure_level       memory.usage_in_bytes
+cgroup.procs           memory.kmem.limit_in_bytes      memory.kmem.tcp.max_usage_in_bytes  memory.max_usage_in_bytes   memory.memsw.usage_in_bytes      memory.soft_limit_in_bytes  memory.use_hierarchy
+memory.failcnt         memory.kmem.max_usage_in_bytes  memory.kmem.tcp.usage_in_bytes      memory.memsw.failcnt        memory.move_charge_at_immigrate  memory.stat                 notify_on_release
+mathxh@MathxH:/sys/fs/cgroup/memory/test-limit-memory$ sudo sh -c "echo "100m" > memory.limit_in_bytes"
+mathxh@MathxH:/sys/fs/cgroup/memory/test-limit-memory$ sudo sh -c "echo $$ > tasks"
+mathxh@MathxH:/sys/fs/cgroup/memory/test-limit-memory$ stress --vm-bytes 200m --vm-keep -m 1
+stress: info: [4864] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+stress: FAIL: [4864] (415) <-- worker 4865 got signal 9
+stress: WARN: [4864] (417) now reaping child worker processes
+stress: FAIL: [4864] (451) failed run completed in 0s
+mathxh@MathxH:/sys/fs/cgroup/memory/test-limit-memory$ stress --vm-bytes 90m --vm-keep -m 1
+stress: info: [4879] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+```
+
+The following is the resource consumption of the stress process without resource limit, about 200MB, if you limit the resource to 100MB, then start here with the stress tool, then it will be killed by the system with kill -9 signal, if set below 100MB, you can start successfully.
+
+```txt
+ 4822 mathxh    20   0  208664 205172    272 R 100.0   4.1   3:21.37 stress
+```
+
+## How Docker uses cgroups
+
+Docker does this by creating a cgroup for each container and configuring resource limits and resource monitoring through the cgroup
+
+For the curious, check out the directory /sys/fs/cgroup/memory/docker and other such Docker-related cgroups
