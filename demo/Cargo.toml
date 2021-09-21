@@ -7,8 +7,13 @@ edition = "2018"
 
 [dependencies]
 unshare = "0.7.0"
+cgroups-rs = "0.2.6"
 
 [[bin]]
 name = "ns"
 path = "src/namespace.rs"
+
+[[bin]]
+name = "cg"
+path = "src/cgroups.rs"
 
