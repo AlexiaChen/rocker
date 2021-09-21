@@ -303,9 +303,11 @@
 // $
 
 use unshare::{Command, Namespace, UidMap, GidMap};
-use std::{env};
+use std::{env, process};
+
 const ROOT_PRV : u32 = 0;
 const NO_ROOT_PRV :u32 = 1;
+
 fn main() {
     if env::args().len() != 2 {
         println!("usage: ./ns 0(root in container) or ./ns 1(no root in container)");
@@ -325,7 +327,8 @@ fn main() {
         .status();
     
         if cmd_result.is_err() {
-            println!("error is: {}", cmd_result.err().unwrap() )
+            println!("error is: {}", cmd_result.err().unwrap() );
+            process::exit(1);  
         }
     } else {
         let cmd_result = Command::new("/bin/sh")
@@ -334,7 +337,8 @@ fn main() {
         .status();
     
         if cmd_result.is_err() {
-            println!("error is: {}", cmd_result.err().unwrap() )
+            println!("error is: {}", cmd_result.err().unwrap() );
+            process::exit(1);  
         }
     }
 
