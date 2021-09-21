@@ -1,28 +1,63 @@
+// mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./cg upper
+// forked process PID 1479
+// waiting child process PID 1479
+// enrty CURRENT_PROC pid 1
+// ^C
+// mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./cg lower
+// forked process PID 1485
+// waiting child process PID 1485
+// enrty CURRENT_PROC pid 1
+// stress: FAIL: [3] (415) <-- worker 4 got signal 9
+// stress: WARN: [3] (417) now reaping child worker processes
+// stress: FAIL: [3] (421) kill error: No such process
+// stress: FAIL: [3] (451) failed run completed in 0s
+// /bin/sh: 1: stress:: not found
+// leave CURRENT_PROC pid 1
+// wait finished child process PID 1485
+// mathxh@MathxH:~/Project/rocker/target/debug$
+
+// The result is that a low memory limit (100M) automatically kills the stress process with 200M of memory, 
+// and a high memory limit (300M) keeps the 200M stress process running.
+
 use unshare::{Command, Namespace, UidMap, GidMap};
 use std::{env, process};
+use std::{thread, time};
 use cgroups_rs::*;
 use cgroups_rs::cgroup_builder::*;
 
 const NO_ROOT_PRV :u32 = 1;
 const CURRENT_PROC :&str= "/proc/self/exe";
 
+const UPPER_MEM_LIMIT :i32 = 300 * 1024 * 1024;
+const LOWER_MEM_LIMIT :i32 = 100 * 1024 * 1024;
+
 fn main() {
 
     let arg0 = env::args().nth(0).unwrap();
     // chekc if it self in container
     if arg0 == CURRENT_PROC {
-        println!("current pid {}", process::id());
+        // wait for cgroup build and add_task finished, then go run stress
+        thread::sleep(time::Duration::from_secs(3));
+        println!("enrty CURRENT_PROC pid {}", process::id());
         // sudo apt install stress
         let cmd_result = Command::new("/bin/sh")
         .arg("-c")
-        .arg0("stress --vm-bytes 200m --vm-keep -m 1")
+        .arg("`stress --vm-bytes 200m --vm-keep -m 1`")
         .status();
     
         if cmd_result.is_err() {
             println!("container process error is: {}", cmd_result.err().unwrap());
             process::exit(1);   
         }
+        println!("leave CURRENT_PROC pid {}", process::id());
+        return;
     }
+
+    if env::args().len() != 2 {
+        println!("usage: ./cg upper (upper limit) or ./cg lower (lower limit)");
+        return
+    }
+    
 
     let cmd_result = Command::new(CURRENT_PROC)
     .unshare(&[Namespace::Uts, Namespace::Pid, Namespace::Mount])
@@ -36,10 +71,18 @@ fn main() {
         let mut child = cmd_result.unwrap();
         println!("forked process PID {}", child.pid());
 
+        let mut mem_limit = UPPER_MEM_LIMIT;
+        let arg1 = env::args().nth(1).unwrap();
+        if arg1 == "upper" {
+            mem_limit = UPPER_MEM_LIMIT;
+        } else if arg1 == "lower" {
+            mem_limit = LOWER_MEM_LIMIT;
+        }
+        
         let h = cgroups_rs::hierarchies::auto();
         let cg: Cgroup = CgroupBuilder::new("hello")
             .memory()
-                .memory_hard_limit(100 * 1024 * 1024)
+                .memory_hard_limit(mem_limit.into())
             .done()
             .build(h);
 
@@ -50,11 +93,13 @@ fn main() {
             process::exit(1);
         }
 
+        println!("waiting child process PID {}", child.pid());
         let res = child.wait();
         if res.is_err() {
             println!("child process wait failed {}", res.err().unwrap());
             process::exit(1);
         }
+        println!("wait finished child process PID {}", child.pid());
         
         let res = cg.delete();
         if res.is_err() {
