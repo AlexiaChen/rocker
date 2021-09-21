@@ -134,6 +134,8 @@ mathxh@MathxH:~/cgroup-test/cgroup1$ cat /proc/3923/cgroup
 2:cpu:/
 1:cpuset:/
 0::/
+mathxh@MathxH:~$ sudo umount ./cgroup-test/
+mathxh@MathxH:~$ rm -rf ./cgroup-test/
 ```
 
 As you can see, the current process 3923 has been added to cgroup-test:/cgroup-1, of course, you can move it to the tasks file of cgroup2, so repeat the above steps, and it will end up in cgroup2, very convenient operation.
