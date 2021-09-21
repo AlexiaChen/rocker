@@ -275,6 +275,33 @@
 // uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
 // $
 
+//////////////////////////////// Network
+// mathxh@MathxH:~/Project/rocker/target/debug$ ifconfig
+// eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+//         inet 172.21.111.53  netmask 255.255.240.0  broadcast 172.21.111.255
+//         inet6 fe80::215:5dff:fe7f:b325  prefixlen 64  scopeid 0x20<link>
+//         ether 00:15:5d:7f:b3:25  txqueuelen 1000  (Ethernet)
+//         RX packets 100354  bytes 63888210 (63.8 MB)
+//         RX errors 0  dropped 0  overruns 0  frame 0
+//         TX packets 109753  bytes 289025475 (289.0 MB)
+//         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+// lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+//         inet 127.0.0.1  netmask 255.0.0.0
+//         inet6 ::1  prefixlen 128  scopeid 0x10<host>
+//         loop  txqueuelen 1000  (Local Loopback)
+//         RX packets 44  bytes 2200 (2.2 KB)
+//         RX errors 0  dropped 0  overruns 0  frame 0
+//         TX packets 44  bytes 2200 (2.2 KB)
+//         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+// mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns
+// [sudo] password for mathxh:
+// usage: ./ns 0(root in container) or ./ns 1(no root in container)
+// mathxh@MathxH:~/Project/rocker/target/debug$ sudo ./ns 1
+// $ ifconfig
+// $
+
 use unshare::{Command, Namespace, UidMap, GidMap};
 use std::{env};
 const ROOT_PRV : u32 = 0;

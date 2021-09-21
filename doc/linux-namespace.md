@@ -33,3 +33,12 @@ The PID namespace is used to isolate process IDs. It is understandable that insi
 
 ## Mount
 
+The Mount namespace is used to isolate the view of mount points seen by individual processes. The file system hierarchy seen by processes in different namespaces is different. Calls to mount() and unmont() in the Mount namespace only affect the filesystem in the current namespace, and have no effect on the global filesystem. Similar to chroot(), but more flexible and secure. This namespace was the first namespace type implemented in Linux, so the parameter is CLONE_NEWNS. docker's Volume also takes advantage of this feature.
+
+## User
+
+The User namespace mainly isolates the user's user group ID. i.e., the UID and GID of a process can be different inside and outside the namespace. It is common to create a User namespace on the host as a non-root user, and then map it to the root user inside the User namespace. This means that the process has root privileges inside the User namespace, but not outside the User namespace
+
+## NetWork
+
+Network namespace is a namespace used to isolate network devices, IP address ports, and other network stacks. It allows each container to have its own independent (virtual) network device, and applications within the container can be bound to their own ports, and the ports within each namespace will not conflict with each other. After building a bridge on the host, it is easy to implement inter-container communication, and applications on different containers can use the same ports.

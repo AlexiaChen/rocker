@@ -10,5 +10,5 @@ unshare = "0.7.0"
 
 [[bin]]
 name = "ns"
-path = "src/ns.rs"
+path = "src/namespace.rs"
 
