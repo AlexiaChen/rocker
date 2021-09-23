@@ -73,3 +73,18 @@ mathxh@MathxH:~/aufs$ sudo mount -t aufs -o dirs=./container-layer:./image-layer
 ```
 
 Finally you will see the container-layer.txt and image-layer.txt files appear in the mnt folder
+
+## Create Overlay with mount command
+
+`upperdir` option is container layer, `lowerdir` is image layer:
+
+```bash
+mount -t overlay overlay -o lowerdir=./image-layer1:./image-layer2:./image-layer3,upperdir=./container-layer  ./mnt
+```
+
+
+## References:
+
+- https://wiki.archlinux.org/title/Overlay_filesystem
+- https://unix.stackexchange.com/questions/588627/how-do-i-merge-directories-read-only-using-overlayfs
+- https://docs.docker.com/storage/storagedriver/overlayfs-driver/
