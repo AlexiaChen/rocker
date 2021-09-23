@@ -58,3 +58,18 @@ Finally, a few words about how AUFS removes a file for a container. To delete fi
 
 ## Create AUFS with mount command
 
+```bash
+mathxh@MathxH:~$ mkdir aufs
+mathxh@MathxH:~$ cd aufs/
+mathxh@MathxH:~/aufs$ mkdir container-layer
+mathxh@MathxH:~/aufs$ mkdir image-layer1
+mathxh@MathxH:~/aufs$ mkdir image-layer2
+mathxh@MathxH:~/aufs$ mkdir image-layer3
+mathxh@MathxH:~/aufs$ echo "I am container layer" > ./container-layer/container-layer.txt
+mathxh@MathxH:~/aufs$ echo "I am image layer 1" > ./image-layer1/image-layer1.txt
+mathxh@MathxH:~/aufs$ echo "I am image layer 2" > ./image-layer2/image-layer2.txt
+mathxh@MathxH:~/aufs$ echo "I am image layer 3" > ./image-layer3/image-layer3.txt
+mathxh@MathxH:~/aufs$ sudo mount -t aufs -o dirs=./container-layer:./image-layer1:./image-layer2:./image-layer3 none ./mnt
+```
+
+Finally you will see the container-layer.txt and image-layer.txt files appear in the mnt folder
