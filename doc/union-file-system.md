@@ -96,20 +96,18 @@ directly use https://github.com/containers/fuse-overlayfs
 
 ```bash
 sudo apt install fuse-overlayfs
-mathxh@MathxH:~/overlayfs$ mkdir container-layer
+mkdir overlayfs && cd overlayfs
+mkdir container-layer
 mkdir work
-mathxh@MathxH:~/overlayfs$ mkdir image-layer2
-mathxh@MathxH:~/overlayfs$ mkdir image-layer3
-mathxh@MathxH:~/overlayfs$ echo "I am container layer" > ./container-layer/container-layer.txt
-mathxh@MathxH:~/overlayfs$ echo "I am image layer 1" > ./image-layer1/image-layer1.txt
--bash: ./image-layer1/image-layer1.txt: No such file or directory
-mathxh@MathxH:~/overlayfs$ ls
-container-layer  image-layer2  image-layer3
-mathxh@MathxH:~/overlayfs$ mkdir image-layer1
-mathxh@MathxH:~/overlayfs$ echo "I am image layer 1" > ./image-layer1/image-layer1.txt
-mathxh@MathxH:~/overlayfs$ echo "I am image layer 2" > ./image-layer2/image-layer2.txt
-mathxh@MathxH:~/overlayfs$ echo "I am image layer 3" > ./image-layer3/image-layer3.txt
+mkdir image-layer1
+mkdir image-layer2
+mkdir image-layer3
+echo "I am container layer" > ./container-layer/container-layer.txt
+echo "I am image layer 1" > ./image-layer1/image-layer1.txt
+echo "I am image layer 2" > ./image-layer2/image-layer2.txt
+echo "I am image layer 3" > ./image-layer3/image-layer3.txt
 sudo fuse-overlayfs -o  lowerdir=./image-layer1:./image-layer2:./image-layer3,upperdir=./container-layer,workdir=./work ./mnt -o allow_other=true
+sudo umount ./mnt
 ```
 
 and you can run to test CoW feature for OverlayFS:
