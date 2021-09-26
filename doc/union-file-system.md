@@ -82,6 +82,88 @@ Finally you will see the container-layer.txt and image-layer.txt files appear in
 mount -t overlay overlay -o lowerdir=./image-layer1:./image-layer2:./image-layer3,upperdir=./container-layer  ./mnt
 ```
 
+The working directory (workdir) needs to be an empty directory on the same filesystem mount as the upper directory.
+
+- The lower directory can be read-only or could be an overlay itself.
+- The upper directory is normally writable.
+- The workdir is used to prepare files as they are switched between the layers.
+
+The lower directory can actually be a list of directories separated by :, all changes in the merged directory are still reflected in upper. 
+
+## Create OverlayFS with another overlayFS implementation
+
+directly use https://github.com/containers/fuse-overlayfs 
+
+```bash
+sudo apt install fuse-overlayfs
+mathxh@MathxH:~/overlayfs$ mkdir container-layer
+mkdir work
+mathxh@MathxH:~/overlayfs$ mkdir image-layer2
+mathxh@MathxH:~/overlayfs$ mkdir image-layer3
+mathxh@MathxH:~/overlayfs$ echo "I am container layer" > ./container-layer/container-layer.txt
+mathxh@MathxH:~/overlayfs$ echo "I am image layer 1" > ./image-layer1/image-layer1.txt
+-bash: ./image-layer1/image-layer1.txt: No such file or directory
+mathxh@MathxH:~/overlayfs$ ls
+container-layer  image-layer2  image-layer3
+mathxh@MathxH:~/overlayfs$ mkdir image-layer1
+mathxh@MathxH:~/overlayfs$ echo "I am image layer 1" > ./image-layer1/image-layer1.txt
+mathxh@MathxH:~/overlayfs$ echo "I am image layer 2" > ./image-layer2/image-layer2.txt
+mathxh@MathxH:~/overlayfs$ echo "I am image layer 3" > ./image-layer3/image-layer3.txt
+sudo fuse-overlayfs -o  lowerdir=./image-layer1:./image-layer2:./image-layer3,upperdir=./container-layer,workdir=./work ./mnt -o allow_other=true
+```
+
+and you can run to test CoW feature for OverlayFS:
+
+```bash
+mathxh@MathxH:~/overlayfs$ cd mnt/
+mathxh@MathxH:~/overlayfs/mnt$ ls
+container-layer.txt  image-layer1.txt  image-layer2.txt  image-layer3.txt
+mathxh@MathxH:~/overlayfs/mnt$ cd ..
+mathxh@MathxH:~/overlayfs$ cat ./mnt/container-layer.txt
+I am container layer
+mathxh@MathxH:~/overlayfs$ echo "Fuck you  image 3" >> ./mnt/image-layer3.txt
+mathxh@MathxH:~/overlayfs$ cat ./mnt/image-layer3.txt
+I am image layer 3
+Fuck you  image 3
+mathxh@MathxH:~/overlayfs$ cat ./image-layer3/image-layer3.txt
+I am image layer 3
+mathxh@MathxH:~/overlayfs$ cat ./container-layer/
+container-layer.txt  image-layer3.txt
+mathxh@MathxH:~/overlayfs$ cat ./container-layer/image-layer3.txt
+I am image layer 3
+Fuck you  image 3
+```
+
+According to the overlayFS documentation the upperdir directory is writable and the lowerdir is read-only. So let's set lowerdir as our mirror layer and upperdir as our container layer. So you can see that when I manipulate the data of image-layer3.txt in the directory mnt, you will see that there is no change in that file in the mirror layer, the change reacts in the directory mnt and in the directory of the container layer, and there is an extra file called image-layer3.txt with additional text content in the directory of the container layer.
+
+In other words, when trying to write to the mnt/image-layer3.txt file, overlayFS first looks for the file named image-layer3.txt in the mnt directory, copies it to the container layer's directory in upperdir, and then does the following to the image-layer3.txt in the container layer This is very similar to the AUFS system and is much more concise and clear.
+
+## Create mergerfs with command
+
+```bash
+sudo apt install mergerfs
+sudo mergerfs -o allow_other,use_ino,link_cow=true  ./image-layer1:./image-layer2:./image-layer3:./container-layer ./mnt
+```
+
+```txt
+mathxh@MathxH:~/aufs/mnt$ tree .
+.
+├── container-layer.txt
+├── image-layer1.txt
+├── image-layer2.txt
+└── image-layer3.txt
+
+0 directories, 4 files
+```
+
+remove 
+
+```bash
+sudo umount ./mnt
+```
+
+
+This fs does not support CoW like overlayFS or AUFS.
 
 ## References:
 
