@@ -33,7 +33,7 @@ impl CmdConfig {
         App::new("rocker")
         .author("MathxH Chen", "brainfvck@foxmail.com")
         .addr("Github", "https://github.com/AlexiaChen/rocker")
-        .desc("A simple docker implemented in Rust")
+        .desc("A simple container runtime implemented in Rust")
         .version("0.0.1")
         .cmd(
             Cmd::new("run")
