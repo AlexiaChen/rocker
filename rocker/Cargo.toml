@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 app = "0.6.5"
 unshare = "0.7.0"
+cgroups-rs = "0.2.6"
+log = "0.4.14"
+pretty_env_logger = "0.4"
