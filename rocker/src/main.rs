@@ -10,6 +10,7 @@ use std::{fmt, path::PathBuf};
 pub struct CmdConfig {
     pub enable_tty: bool,
     pub run_command: Vec<PathBuf>,
+    init_command: Vec<PathBuf>,
 }
 
 fn main() {
@@ -38,13 +39,21 @@ impl CmdConfig {
         .cmd(
             Cmd::new("run")
             .opt(
-                Opt::new("ti", &mut config.enable_tty)
+                Opt::new("tty", &mut config.enable_tty)
                 .long("tty")
+                .short('t')
                 .help("enable tty")
             )
             .args(
                 Args::new("command", &mut config.run_command)
                 .help("run specific command")
+            )
+        )
+        .cmd(
+            Cmd::new("init")
+            .args(
+                Args::new("command", &mut config.init_command)
+                .help("init specific command. (WARNING: this command cannot be called from external, it only used in internal)")
             )
         )
     }
@@ -54,6 +63,9 @@ impl CmdConfig {
         match cmd {
             Some("run") => {
                println!("Here is run call");
+            }
+            Some("init") => {
+                println!("Here is init call");
             }
             _ => unreachable!(),
         }
