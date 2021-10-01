@@ -3,7 +3,8 @@ extern crate pretty_env_logger;
 
 extern crate app;
 use app::{App, AppError, Args, Cmd, Opt, OptTypo, OptValue, OptValueParse};
-use std::{fmt, path::PathBuf};
+use std::{fmt, path::PathBuf, str::FromStr};
+use container::Container;
 
 
 #[derive(Debug, Default, Clone)]
@@ -62,7 +63,7 @@ impl CmdConfig {
         println!("Match Cmd: {:?}", cmd);
         match cmd {
             Some("run") => {
-               println!("Here is run call");
+               run(self.enable_tty, self.run_command[0].to_str().unwrap());
             }
             Some("init") => {
                 println!("Here is init call");
@@ -71,4 +72,16 @@ impl CmdConfig {
         }
         Ok(())
     }
+}
+
+fn run(tty :bool, cmd :&str) {
+    let parent = Container::create_parent_process(tty, cmd);
+    if parent.is_err() {
+        error!("create parent process failed");
+    }
+
+    let exit = parent.unwrap().wait().unwrap();
+    trace!("parent process wait finished exit status is {}", exit);
+
+    std::process::exit(-1);
 }
