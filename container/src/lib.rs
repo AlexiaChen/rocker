@@ -12,7 +12,7 @@ pub struct Container{}
 
 impl Container {
 
-    pub fn init_process(cmd :&str, args: &[&'static str]) -> Result<()>{
+    pub fn init_process(cmd :&str, _args: &[&'static str]) -> Result<()>{
         let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
         let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""));
         res.map_err(|e| {

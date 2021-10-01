@@ -2,8 +2,8 @@ extern crate pretty_env_logger;
 #[macro_use] extern crate log;
 
 extern crate app;
-use app::{App, AppError, Args, Cmd, Opt, OptTypo, OptValue, OptValueParse};
-use std::{fmt, path::PathBuf, str::FromStr};
+use app::{App, Args, Cmd, Opt};
+use std::path::PathBuf;
 use container::Container;
 
 
