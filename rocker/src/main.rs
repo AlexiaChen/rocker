@@ -40,6 +40,7 @@ impl CmdConfig {
         .version("0.0.1")
         .cmd(
             Cmd::new("run")
+            .desc("run container. example: sudo RUST_LOG=trace ./rocker run --tty /bin/sh")
             .opt(
                 Opt::new("tty", &mut config.enable_tty)
                 .long("tty")
@@ -53,6 +54,7 @@ impl CmdConfig {
         )
         .cmd(
             Cmd::new("init")
+            .desc("must be used in internal of rocker. example: rocker init /bin.sh")
             .args(
                 Args::new("command", &mut config.init_command)
                 .help("init specific command. (WARNING: this command cannot be called from external, it only used in internal)")
