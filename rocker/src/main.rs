@@ -5,6 +5,7 @@ extern crate app;
 use app::{App, Args, Cmd, Opt};
 use std::path::PathBuf;
 use container::Container;
+use anyhow::{Result, Error};
 
 
 #[derive(Debug, Default, Clone)]
@@ -16,7 +17,7 @@ pub struct CmdConfig {
 
 fn main() {
     pretty_env_logger::init();
-    info!("such information");
+    info!("hello rocker");
 
     let mut default = CmdConfig::default();
     let app = CmdConfig::make_app_config(&mut default);
@@ -66,7 +67,10 @@ impl CmdConfig {
                run(self.enable_tty, self.run_command[0].to_str().unwrap());
             }
             Some("init") => {
-                println!("Here is init call");
+               init(self.init_command[0].to_str().unwrap()).map_err(|e|{
+                   error!("init failed: {}",e.to_string())
+               }).unwrap();
+              
             }
             _ => unreachable!(),
         }
@@ -75,13 +79,23 @@ impl CmdConfig {
 }
 
 fn run(tty :bool, cmd :&str) {
+    debug!("rocker run  tty:{}, cmd:{}", tty, cmd);
+
     let parent = Container::create_parent_process(tty, cmd);
     if parent.is_err() {
         error!("create parent process failed");
+        std::process::exit(-1);
     }
 
+    trace!("waiting parent finish");
     let exit = parent.unwrap().wait().unwrap();
     trace!("parent process wait finished exit status is {}", exit);
 
+
     std::process::exit(-1);
+}
+
+fn init(cmd :&str) -> Result<()> {
+    debug!("rocker init cmd:{}", cmd);
+    Container::init_process(cmd, &[])
 }

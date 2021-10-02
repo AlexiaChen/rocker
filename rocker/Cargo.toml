@@ -13,3 +13,5 @@ cgroups-rs = "0.2.6"
 log = "0.4.14"
 pretty_env_logger = "0.4"
 container = {path = "../container/"}
+anyhow = "1.0"
+thiserror = "1.0"
