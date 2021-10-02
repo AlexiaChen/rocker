@@ -54,7 +54,7 @@ impl CmdConfig {
         )
         .cmd(
             Cmd::new("init")
-            .desc("must be used in internal of rocker. example: rocker init /bin.sh")
+            .desc("must be used in internal of rocker. example: rocker init /bin/sh")
             .args(
                 Args::new("command", &mut config.init_command)
                 .help("init specific command. (WARNING: this command cannot be called from external, it only used in internal)")
