@@ -1,11 +1,11 @@
 [workspace]
 members = [
-  "cgroups",
-  "container",
-  "network",
-  "namespace",
-  "rocker",
-  "demo",
+  "src/cgroups",
+  "src/container",
+  "src/network",
+  "src/namespace",
+  "src/rocker",
+  "src/demo",
 ]
 
 [profile.dev]
