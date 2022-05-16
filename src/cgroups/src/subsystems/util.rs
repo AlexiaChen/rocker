@@ -4,7 +4,7 @@ use std::io::{self, BufRead};
 
 /// Find the directory where the root node of the hierarchy cgroup is mounted on a subsystem via /proc/self/mountinfo
 pub fn find_cgroup_mount_point(subsystem: &str) -> Result<String, String> {
-    // cat /proc/self/mountinfo
+    // cat /proc/self/mountinfo to check returned text format, and you will understand this function implementation
     let mut mount_info_file = File::open("/proc/self/mountinfo").map_err(|e| format!("{}", e))?;
     let mut buf: String  = String::new();
     mount_info_file.read_to_string(&mut buf).unwrap();
