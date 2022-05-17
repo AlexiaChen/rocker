@@ -92,6 +92,7 @@ mod tests {
 
     #[test]
     fn test_get_crgoup_path() {
+        // TODO: need run with sudo
         match get_cgroup_path("memory", "test", true) {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/memory/test");
