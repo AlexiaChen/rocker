@@ -1,12 +1,12 @@
 extern crate pretty_env_logger;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 extern crate app;
+use anyhow::{Error, Result};
 use app::{App, Args, Cmd, Opt};
-use std::path::PathBuf;
 use container::Container;
-use anyhow::{Result, Error};
-
+use std::path::PathBuf;
 
 #[derive(Debug, Default, Clone)]
 pub struct CmdConfig {
@@ -24,11 +24,9 @@ fn main() {
     let helper = app.parse_args();
 
     default
-    .check_and_call(helper.current_cmd_str())
-    .map_err(|e| {
-        helper.help_cmd_err_exit(helper.current_cmd_ref(), e, 1)
-    })
-    .unwrap();
+        .check_and_call(helper.current_cmd_str())
+        .map_err(|e| helper.help_cmd_err_exit(helper.current_cmd_ref(), e, 1))
+        .unwrap();
 }
 
 impl CmdConfig {
@@ -66,13 +64,12 @@ impl CmdConfig {
         println!("Match Cmd: {:?}", cmd);
         match cmd {
             Some("run") => {
-               run(self.enable_tty, self.run_command[0].to_str().unwrap());
+                run(self.enable_tty, self.run_command[0].to_str().unwrap());
             }
             Some("init") => {
-               init(self.init_command[0].to_str().unwrap()).map_err(|e|{
-                   error!("init failed: {}",e.to_string())
-               }).unwrap();
-              
+                init(self.init_command[0].to_str().unwrap())
+                    .map_err(|e| error!("init failed: {}", e.to_string()))
+                    .unwrap();
             }
             _ => unreachable!(),
         }
@@ -80,7 +77,7 @@ impl CmdConfig {
     }
 }
 
-fn run(tty :bool, cmd :&str) {
+fn run(tty: bool, cmd: &str) {
     debug!("rocker run  tty:{}, cmd:{}", tty, cmd);
 
     let parent = Container::create_parent_process(tty, cmd);
@@ -93,11 +90,10 @@ fn run(tty :bool, cmd :&str) {
     let exit = parent.unwrap().wait().unwrap();
     trace!("parent process wait finished exit status is {}", exit);
 
-
     std::process::exit(-1);
 }
 
-fn init(cmd :&str) -> Result<()> {
+fn init(cmd: &str) -> Result<()> {
     debug!("rocker init cmd:{}", cmd);
     Container::init_process(cmd, &[])
 }

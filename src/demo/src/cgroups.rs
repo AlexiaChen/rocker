@@ -16,23 +16,22 @@
 // wait finished child process PID 1485
 // mathxh@MathxH:~/Project/rocker/target/debug$
 
-// The result is that a low memory limit (100M) automatically kills the stress process with 200M of memory, 
+// The result is that a low memory limit (100M) automatically kills the stress process with 200M of memory,
 // and a high memory limit (300M) keeps the 200M stress process running.
 
-use unshare::{Command, Namespace, UidMap, GidMap};
+use cgroups_rs::cgroup_builder::*;
+use cgroups_rs::*;
 use std::{env, process};
 use std::{thread, time};
-use cgroups_rs::*;
-use cgroups_rs::cgroup_builder::*;
+use unshare::{Command, GidMap, Namespace, UidMap};
 
-const NO_ROOT_PRV :u32 = 1;
-const CURRENT_PROC :&str= "/proc/self/exe";
+const NO_ROOT_PRV: u32 = 1;
+const CURRENT_PROC: &str = "/proc/self/exe";
 
-const UPPER_MEM_LIMIT :i32 = 300 * 1024 * 1024;
-const LOWER_MEM_LIMIT :i32 = 100 * 1024 * 1024;
+const UPPER_MEM_LIMIT: i32 = 300 * 1024 * 1024;
+const LOWER_MEM_LIMIT: i32 = 100 * 1024 * 1024;
 
 fn main() {
-
     let arg0 = env::args().nth(0).unwrap();
     // chekc if it self in container
     if arg0 == CURRENT_PROC {
@@ -41,13 +40,16 @@ fn main() {
         println!("enrty CURRENT_PROC pid {}", process::id());
         // sudo apt install stress
         let cmd_result = Command::new("/bin/sh")
-        .arg("-c")
-        .arg("`stress --vm-bytes 200m --vm-keep -m 1`")
-        .status();
-    
+            .arg("-c")
+            .arg("`stress --vm-bytes 200m --vm-keep -m 1`")
+            .status();
+
         if cmd_result.is_err() {
-            println!("container process error is: {}", cmd_result.err().unwrap());
-            process::exit(1);   
+            println!(
+                "container process error is: {}",
+                cmd_result.err().unwrap()
+            );
+            process::exit(1);
         }
         println!("leave CURRENT_PROC pid {}", process::id());
         return;
@@ -55,15 +57,25 @@ fn main() {
 
     if env::args().len() != 2 {
         println!("usage: ./cg upper (upper memory limit) or ./cg lower (lower memory limit)");
-        return
+        return;
     }
-    
 
     let cmd_result = Command::new(CURRENT_PROC)
-    .unshare(&[Namespace::Uts, Namespace::Pid, Namespace::Mount])
-    .set_id_maps(vec![UidMap{inside_uid:NO_ROOT_PRV, outside_uid:NO_ROOT_PRV, count: 1}], vec![GidMap{inside_gid:NO_ROOT_PRV, outside_gid:NO_ROOT_PRV, count: 1}])
-    .spawn();
-    
+        .unshare(&[Namespace::Uts, Namespace::Pid, Namespace::Mount])
+        .set_id_maps(
+            vec![UidMap {
+                inside_uid: NO_ROOT_PRV,
+                outside_uid: NO_ROOT_PRV,
+                count: 1,
+            }],
+            vec![GidMap {
+                inside_gid: NO_ROOT_PRV,
+                outside_gid: NO_ROOT_PRV,
+                count: 1,
+            }],
+        )
+        .spawn();
+
     if cmd_result.is_err() {
         println!("Spawn ERROR {}", cmd_result.err().unwrap());
         process::exit(1)
@@ -78,15 +90,16 @@ fn main() {
         } else if arg1 == "lower" {
             mem_limit = LOWER_MEM_LIMIT;
         }
-        
+
         let h = cgroups_rs::hierarchies::auto();
         let cg: Cgroup = CgroupBuilder::new("hello")
             .memory()
-                .memory_hard_limit(mem_limit.into())
+            .memory_hard_limit(mem_limit.into())
             .done()
             .build(h);
 
-        let mem: &cgroups_rs::memory::MemController = cg.controller_of().unwrap();
+        let mem: &cgroups_rs::memory::MemController =
+            cg.controller_of().unwrap();
         let res = mem.add_task(&CgroupPid::from(child.pid() as u64));
         if res.is_err() {
             println!("mem addtask failed {}", res.err().unwrap());
@@ -100,7 +113,7 @@ fn main() {
             process::exit(1);
         }
         println!("wait finished child process PID {}", child.pid());
-        
+
         let res = cg.delete();
         if res.is_err() {
             println!("cgroup delete failed {}", res.err().unwrap());
