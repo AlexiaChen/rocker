@@ -66,3 +66,94 @@ impl MemorySubsystem {
         MemorySubsystem {}
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process;
+
+    #[test]
+    fn test_memory_subsystem() {
+        let memory_subsystem = MemorySubsystem::new();
+        let cgroup_path = "testmemlimit";
+        let res = ResourceConfig {
+            memory_limit: Some("1000m".to_string()),
+            ..Default::default()
+        };
+
+        match memory_subsystem.set(cgroup_path, &res) {
+            Ok(_) => {
+                let path = get_cgroup_path(
+                    memory_subsystem.name(),
+                    cgroup_path,
+                    false,
+                )
+                .unwrap();
+
+                let path = Path::new(&path).join("memory.limit_in_bytes");
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    true,
+                    "memory subsystem cgroup path memory.limit_in_bytes should exist"
+                );
+
+                let mut file = File::open(path).unwrap();
+                let mut contents = String::new();
+                file.read_to_string(&mut contents).unwrap();
+                let expected = 1000 * 1024 * 1024;
+                assert_eq!(contents.trim(), format!("{}", expected));
+            }
+            Err(e) => {
+                assert!(false, "set cgroup memory failed {}", e);
+            }
+        }
+
+        match memory_subsystem.apply(cgroup_path, process::id() as i32) {
+            Ok(_) => {
+                let path = get_cgroup_path(
+                    memory_subsystem.name(),
+                    cgroup_path,
+                    false,
+                )
+                .unwrap();
+
+                let path = Path::new(&path).join("tasks");
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    true,
+                    "memory subsystem cgroup path tasks should exist"
+                );
+
+                let mut file = File::open(path).unwrap();
+                let mut contents = String::new();
+                file.read_to_string(&mut contents).unwrap();
+                let expected = format!("{}", process::id());
+                assert_eq!(contents.trim(), expected);
+            }
+            Err(e) => {
+                assert!(false, "apply cgroup memory failed {}", e);
+            }
+        }
+        
+        // move the process into the cgroup root path  ( /sys/fs/cgroup/memory )
+        let _ = memory_subsystem.apply("", process::id() as i32);
+        match memory_subsystem.remove(cgroup_path) {
+            Ok(_) => {
+                let path = get_cgroup_path(
+                    memory_subsystem.name(),
+                    cgroup_path,
+                    false,
+                )
+                .unwrap();
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    false,
+                    "memory subsystem cgroup path should not exist"
+                );
+            }
+            Err(e) => {
+                assert!(false, "remove cgroup memory failed {}", e);
+            }
+        }
+    }
+}

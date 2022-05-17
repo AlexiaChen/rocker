@@ -1,6 +1,7 @@
 use anyhow::Result;
 /// Structs for users to pass resource limit configurations, including memory limits,
 /// CPU time weights, number of CPU cores, etc.
+#[derive(Default, Debug)]
 pub struct ResourceConfig {
     pub memory_limit: Option<String>,
     pub cpu_shares: Option<String>,
