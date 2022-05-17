@@ -76,9 +76,9 @@ pub fn get_cgroup_path(
                 return Err(anyhow::anyhow!("{}", e));
             }
         }
+    } else {
+        Ok(final_cgroup_path.as_path().to_str().unwrap().to_string())
     }
-
-    Err(anyhow::anyhow!("cgroup path error"))
 }
 
 #[cfg(test)]
@@ -140,6 +140,32 @@ mod tests {
                 assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
                 println!("cpuset subsystem cgroup path {}", path);
                 remove_dir(path).unwrap();
+            }
+            Err(e) => println!("{}", e),
+        }
+
+        //////////////////////  auto_create false  ////////////////////////////////////// 
+
+        match get_cgroup_path("memory", "test", false) {
+            Ok(path) => {
+                assert_eq!(path, "/sys/fs/cgroup/memory/test");
+                println!("memory subsystem cgroup path {}", path);
+            }
+            Err(e) => println!("{}", e),
+        }
+
+        match get_cgroup_path("cpu", "test", false) {
+            Ok(path) => {
+                assert_eq!(path, "/sys/fs/cgroup/cpu/test");
+                println!("cpu subsystem cgroup path {}", path);
+            }
+            Err(e) => println!("{}", e),
+        }
+
+        match get_cgroup_path("cpuset", "test", false) {
+            Ok(path) => {
+                assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
+                println!("cpuset subsystem cgroup path {}", path);
             }
             Err(e) => println!("{}", e),
         }
