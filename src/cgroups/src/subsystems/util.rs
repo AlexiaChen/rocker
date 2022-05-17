@@ -159,7 +159,7 @@ mod tests {
             Err(e) => println!("{}", e),
         }
 
-        //////////////////////  auto_create false  ////////////////////////////////////// 
+        //////////////////////  auto_create false  //////////////////////////////////////
 
         match get_cgroup_path("memory", "test", false) {
             Ok(path) => {
