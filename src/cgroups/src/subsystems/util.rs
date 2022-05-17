@@ -1,4 +1,3 @@
-
 use std::path::Path;
 use std::{fs::File, io::Read, fs::create_dir_all};
 use std::os::unix::fs::PermissionsExt;
@@ -97,7 +96,7 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/memory/test");
                 println!("memory subsystem cgroup path {}", path);
-                remove_dir(path);
+                remove_dir(path).unwrap();
             },
             Err(e) => println!("{}", e),
         }
@@ -106,7 +105,7 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpu/test");
                 println!("cpu subsystem cgroup path {}", path);
-                remove_dir(path);
+                remove_dir(path).unwrap();
             },
             Err(e) => println!("{}", e),
         }
@@ -115,7 +114,7 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
                 println!("cpuset subsystem cgroup path {}", path);
-                remove_dir(path);
+                remove_dir(path).unwrap();
             },
             Err(e) => println!("{}", e),
         }
