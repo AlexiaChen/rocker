@@ -83,7 +83,7 @@ pub fn get_cgroup_path(
 
 #[cfg(test)]
 mod tests {
-    use super::{find_cgroup_mount_point, get_cgroup_path};
+    use super::{find_cgroup_mount_point, get_cgroup_path, Path};
     use std::fs::remove_dir;
 
     #[test]
@@ -121,6 +121,11 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/memory/test");
                 println!("memory subsystem cgroup path {}", path);
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    true,
+                    "memory subsystem cgroup path should exist"
+                );
                 remove_dir(path).unwrap();
             }
             Err(e) => println!("{}", e),
@@ -130,6 +135,11 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpu/test");
                 println!("cpu subsystem cgroup path {}", path);
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    true,
+                    "cpu subsystem cgroup path should exist"
+                );
                 remove_dir(path).unwrap();
             }
             Err(e) => println!("{}", e),
@@ -139,6 +149,11 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
                 println!("cpuset subsystem cgroup path {}", path);
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    true,
+                    "cpuset subsystem cgroup path should exist"
+                );
                 remove_dir(path).unwrap();
             }
             Err(e) => println!("{}", e),
@@ -150,6 +165,11 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/memory/test");
                 println!("memory subsystem cgroup path {}", path);
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    false,
+                    "memory subsystem cgroup path should not exist"
+                );
             }
             Err(e) => println!("{}", e),
         }
@@ -158,6 +178,11 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpu/test");
                 println!("cpu subsystem cgroup path {}", path);
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    false,
+                    "cpu subsystem cgroup path should not exist"
+                );
             }
             Err(e) => println!("{}", e),
         }
@@ -166,6 +191,11 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
                 println!("cpuset subsystem cgroup path {}", path);
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    false,
+                    "cpuset subsystem cgroup path should not exist"
+                );
             }
             Err(e) => println!("{}", e),
         }
