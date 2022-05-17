@@ -134,7 +134,7 @@ mod tests {
                 assert!(false, "apply cgroup memory failed {}", e);
             }
         }
-        
+
         // move the process into the cgroup root path  ( /sys/fs/cgroup/memory )
         let _ = memory_subsystem.apply("", process::id() as i32);
         match memory_subsystem.remove(cgroup_path) {

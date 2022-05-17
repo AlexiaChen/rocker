@@ -61,7 +61,7 @@ impl CpuSubsystem {
         CpuSubsystem {}
     }
 }
-    
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,12 +78,9 @@ mod tests {
 
         match cpu_subsystem.set(cgroup_path, &res) {
             Ok(_) => {
-                let path = get_cgroup_path(
-                    cpu_subsystem.name(),
-                    cgroup_path,
-                    false,
-                )
-                .unwrap();
+                let path =
+                    get_cgroup_path(cpu_subsystem.name(), cgroup_path, false)
+                        .unwrap();
 
                 let path = Path::new(&path).join("cpu.shares");
                 assert_eq!(
@@ -97,7 +94,7 @@ mod tests {
                 file.read_to_string(&mut contents).unwrap();
                 let expected = 1024;
                 assert_eq!(contents.trim(), format!("{}", expected));
-            },
+            }
             Err(e) => {
                 assert!(false, "set cgroup cpu failed {}", e);
             }
@@ -105,12 +102,9 @@ mod tests {
 
         match cpu_subsystem.apply(cgroup_path, process::id() as i32) {
             Ok(_) => {
-                let path = get_cgroup_path(
-                    cpu_subsystem.name(),
-                    cgroup_path,
-                    false,
-                )
-                .unwrap();
+                let path =
+                    get_cgroup_path(cpu_subsystem.name(), cgroup_path, false)
+                        .unwrap();
 
                 let path = Path::new(&path).join("tasks");
                 assert_eq!(
@@ -124,7 +118,7 @@ mod tests {
                 file.read_to_string(&mut contents).unwrap();
                 let expected = format!("{}", process::id());
                 assert_eq!(contents.trim(), expected);
-            },
+            }
             Err(e) => {
                 assert!(false, "apply cgroup cpu failed {}", e);
             }
@@ -133,19 +127,16 @@ mod tests {
         let _ = cpu_subsystem.apply("", process::id() as i32);
         match cpu_subsystem.remove(cgroup_path) {
             Ok(_) => {
-                let path = get_cgroup_path(
-                    cpu_subsystem.name(),
-                    cgroup_path,
-                    false,
-                )
-                .unwrap();
+                let path =
+                    get_cgroup_path(cpu_subsystem.name(), cgroup_path, false)
+                        .unwrap();
 
                 assert_eq!(
                     Path::new(&path).exists(),
                     false,
                     "cpu subsystem cgroup path should not exist"
                 );
-            },
+            }
             Err(e) => {
                 assert!(false, "remove cgroup cpu failed {}", e);
             }
