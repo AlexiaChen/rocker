@@ -2,6 +2,7 @@ use crate::subsystems::{subsystem::*, util::get_cgroup_path};
 use anyhow::Result;
 use std::fs::File;
 use std::io::prelude::*;
+use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;
 pub struct MemorySubsystem {}
 
@@ -19,6 +20,11 @@ impl Subsystem for MemorySubsystem {
                     let memory_limit_path =
                         Path::new(&path).join("memory.limit_in_bytes");
                     let mut file = File::create(memory_limit_path)?;
+                    // 0644
+                    // * (owning) User: read & write
+                    // * Group: read
+                    // * Other: read
+                    file.metadata().unwrap().permissions().set_mode(0o644);
                     file.write_all(memory_limit.as_bytes()).map_err(|e| {
                         anyhow::anyhow!("set cgroup memory failed {}", e)
                     })?;

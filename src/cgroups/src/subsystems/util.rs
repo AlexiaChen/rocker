@@ -46,6 +46,20 @@ pub fn get_cgroup_path(
     if auto_create {
         match create_dir_all(final_cgroup_path.as_path()) {
             Ok(_) => {
+                // rwx oct    meaning
+                // --- ---    -------
+                // 001 01   = execute
+                // 010 02   = write
+                // 011 03   = write & execute
+                // 100 04   = read
+                // 101 05   = read & execute
+                // 110 06   = read & write
+                // 111 07   = read & write & execute
+
+                // * (owning) User: read & write & execute
+                // * Group: read & execute
+                // * Other: read & execute
+                // 0755
                 final_cgroup_path
                     .as_path()
                     .metadata()
