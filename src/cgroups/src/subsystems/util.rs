@@ -57,8 +57,7 @@ pub fn get_cgroup_path(subsystem: &str, cgroup_path: &str, auto_create: bool) ->
 
 #[cfg(test)]
 mod tests {
-    use std::fs::remove_dir_all;
-
+    use std::{fs::remove_dir};
     use super::{find_cgroup_mount_point, get_cgroup_path};
 
     #[test]
@@ -98,7 +97,7 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/memory/test");
                 println!("memory subsystem cgroup path {}", path);
-                remove_dir_all(path);
+                remove_dir(path);
             },
             Err(e) => println!("{}", e),
         }
@@ -107,7 +106,7 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpu/test");
                 println!("cpu subsystem cgroup path {}", path);
-                remove_dir_all(path);
+                remove_dir(path);
             },
             Err(e) => println!("{}", e),
         }
@@ -116,7 +115,7 @@ mod tests {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
                 println!("cpuset subsystem cgroup path {}", path);
-                remove_dir_all(path);
+                remove_dir(path);
             },
             Err(e) => println!("{}", e),
         }
