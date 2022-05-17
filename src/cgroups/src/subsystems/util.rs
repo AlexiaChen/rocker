@@ -40,7 +40,7 @@ pub fn get_cgroup_path(subsystem: &str, cgroup_path: &str, auto_create: bool) ->
     }
     
     if auto_create {
-        match std::fs::create_dir_all(final_cgroup_path.as_path()) {
+        match create_dir_all(final_cgroup_path.as_path()) {
             Ok(_) => {
                 final_cgroup_path.as_path().metadata().unwrap().permissions().set_mode(0o755);
                 return Ok(final_cgroup_path.as_path().to_str().unwrap().to_string());
@@ -57,6 +57,8 @@ pub fn get_cgroup_path(subsystem: &str, cgroup_path: &str, auto_create: bool) ->
 
 #[cfg(test)]
 mod tests {
+    use std::fs::remove_dir_all;
+
     use super::{find_cgroup_mount_point, get_cgroup_path};
 
     #[test]
@@ -92,11 +94,11 @@ mod tests {
 
     #[test]
     fn test_get_crgoup_path() {
-        // TODO: need run with sudo
         match get_cgroup_path("memory", "test", true) {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/memory/test");
-                println!("memory subsystem cgroup path {}", path)
+                println!("memory subsystem cgroup path {}", path);
+                remove_dir_all(path);
             },
             Err(e) => println!("{}", e),
         }
@@ -104,7 +106,8 @@ mod tests {
         match get_cgroup_path("cpu", "test", true) {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpu/test");
-                println!("cpu subsystem cgroup path {}", path)
+                println!("cpu subsystem cgroup path {}", path);
+                remove_dir_all(path);
             },
             Err(e) => println!("{}", e),
         }
@@ -112,7 +115,8 @@ mod tests {
         match get_cgroup_path("cpuset", "test", true) {
             Ok(path) => {
                 assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
-                println!("cpuset subsystem cgroup path {}", path)
+                println!("cpuset subsystem cgroup path {}", path);
+                remove_dir_all(path);
             },
             Err(e) => println!("{}", e),
         }
