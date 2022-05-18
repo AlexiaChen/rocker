@@ -1,9 +1,9 @@
-use crate::subsystems::{subsystem::*, util::get_cgroup_path};
+use crate::subsystems::{subsystem::*/*, util::get_cgroup_path*/};
 use anyhow::Result;
-use std::fs::{remove_dir, File};
-use std::io::prelude::*;
-use std::os::unix::prelude::PermissionsExt;
-use std::path::Path;
+// use std::fs::{remove_dir, File};
+// use std::io::prelude::*;
+// use std::os::unix::prelude::PermissionsExt;
+// use std::path::Path;
 
 pub struct CpusetSubsystem {}
 
@@ -13,7 +13,7 @@ impl Subsystem for CpusetSubsystem {
     }
 
     /// Set cpu set resource limits for the cgroup
-    fn set(&self, cgroup_path: &str, res: &ResourceConfig) -> Result<()> {
+    fn set(&self, _cgroup_path: &str, _res: &ResourceConfig) -> Result<()> {
         // match get_cgroup_path(self.name(), cgroup_path, true) {
         //     Ok(path) => {
         //         if res.cpu_set.as_ref().is_some() {
@@ -34,7 +34,7 @@ impl Subsystem for CpusetSubsystem {
         Ok(())
     }
 
-    fn apply(&self, cgroup_path: &str, pid: i32) -> Result<()> {
+    fn apply(&self, _cgroup_path: &str, _pid: i32) -> Result<()> {
         // match get_cgroup_path(self.name(), cgroup_path, false) {
         //     Ok(path) => {
         //         let pid_path = Path::new(&path).join("tasks");
@@ -51,7 +51,7 @@ impl Subsystem for CpusetSubsystem {
         Ok(())
     }
 
-    fn remove(&self, cgroup_path: &str) -> Result<()> {
+    fn remove(&self, _cgroup_path: &str) -> Result<()> {
         // match get_cgroup_path(self.name(), cgroup_path, false) {
         //     Ok(path) => remove_dir(path)
         //         .map_err(|e| anyhow::anyhow!("remove cgroup failed {}", e)),
@@ -70,8 +70,8 @@ impl CpusetSubsystem {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::process;
+    // use super::*;
+    // use std::process;
 
     #[test]
     fn test_cpuset_subsystem() {
