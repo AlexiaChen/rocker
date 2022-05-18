@@ -1,8 +1,10 @@
 use anyhow::Result;
 use nix::mount::*;
 use nix::unistd::execve;
+use nix::unistd::pipe;
 use std::ffi::CString;
-use unshare::{Child, Command, GidMap, Namespace, Stdio, UidMap};
+use unshare::{Child, Command, GidMap, Namespace, Stdio, Fd, UidMap};
+use which::which;
 
 const ROOT_PRV: u32 = 0;
 
@@ -39,16 +41,24 @@ impl Container {
     ///     2 pts/2 00:00:00 ps
     /// ```
     pub fn init_process(cmd: &str, _args: &[&'static str]) -> Result<()> {
+        let cmd_vec = cmd.split(" ").collect::<Vec<&str>>();
         
         Self::setup_mount();
 
-        let argv = [CString::new(cmd).unwrap()];
+        let argv: Vec<CString> = cmd_vec.iter().map(|x| {
+           CString::new(*x).unwrap()
+        }).collect();
+
+        // search path for specific executable
+        let path = which(cmd_vec[0]).unwrap();
+        let path = CString::new(path.into_os_string().into_string().unwrap().as_str()).unwrap();
+
         let envs: Vec<CString> = std::env::vars()
             .map(|(k, v)| {
                 CString::new(format!("{}={}", k, v).as_str()).unwrap()
             })
             .collect();
-        let res = execve(CString::new(cmd).unwrap().as_c_str(), &argv, &envs);
+        let res = execve(path.as_c_str(), &argv, &envs);
         match res {
             Err(error) => {
                 return Err(anyhow::anyhow!(
@@ -84,14 +94,18 @@ impl Container {
     }
 
     /// create parent process ( init command container process)
-    pub fn create_parent_process(tty: bool, cmd: &str) -> Result<Child> {
+    pub fn create_parent_process(tty: bool, cmd: &str) -> (Result<Child>, i32) {
         let args = ["init", cmd];
 
-        let mut stdin_cfg = Stdio::null();
-        let mut stdout_cfg = Stdio::null();
+        let fd = pipe();
+        let read_pipe_fd = fd.unwrap().0;
+        let write_pipe_fd = fd.unwrap().1;
+
+        let mut stdin_cfg = Stdio::piped();
+        let mut stdout_cfg = Stdio::piped();
         let mut stderr_cfg = Stdio::null();
         if tty {
-            stdin_cfg = Stdio::inherit();
+            stdin_cfg = Stdio::inherit(); 
             stdout_cfg = Stdio::inherit();
             stderr_cfg = Stdio::inherit();
         }
@@ -122,9 +136,11 @@ impl Container {
                     count: 1,
                 }],
             )
+            .file_descriptor(read_pipe_fd, Fd::ReadPipe)
+            .file_descriptor(write_pipe_fd, Fd::WritePipe)
             .spawn()
             .unwrap();
 
-        Ok(handle)
+        (Ok(handle), write_pipe_fd)
     }
 }
