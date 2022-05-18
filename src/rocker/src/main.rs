@@ -3,14 +3,19 @@ extern crate pretty_env_logger;
 extern crate log;
 
 extern crate app;
-use anyhow::{Error, Result};
+use anyhow::Result;
 use app::{App, Args, Cmd, Opt};
 use container::Container;
 use std::path::PathBuf;
+use cgroups::cgroup_manager::CgroupManager;
+use cgroups::subsystems::subsystem::ResourceConfig;
 
 #[derive(Debug, Default, Clone)]
 pub struct CmdConfig {
     pub enable_tty: bool,
+    pub memory_limit: String,
+    pub cpu_shares: String,
+    pub cpu_set: String,
     pub run_command: Vec<PathBuf>,
     init_command: Vec<PathBuf>,
 }
@@ -45,6 +50,20 @@ impl CmdConfig {
                 .short('t')
                 .help("enable tty")
             )
+            .opt(Opt::new("memory_limit", &mut config.memory_limit)
+                .long("memory")
+                .short('m')
+                .help("memory limit")
+            )
+            .opt(
+                Opt::new("cpu_shares", &mut config.cpu_shares)
+                .long("cpushares")
+                .help("cpushares limit")
+            )
+            .opt(Opt::new("cpu_set", &mut config.cpu_set)
+                .long("cpuset")
+                .help("cpuset limit")
+            )
             .args(
                 Args::new("command", &mut config.run_command)
                 .help("run specific command")
@@ -64,7 +83,12 @@ impl CmdConfig {
         println!("Match Cmd: {:?}", cmd);
         match cmd {
             Some("run") => {
-                run(self.enable_tty, self.run_command[0].to_str().unwrap());
+                let res = ResourceConfig {
+                    memory_limit: Some(self.memory_limit.clone()),
+                    cpu_set: Some(self.cpu_shares.clone()),
+                    cpu_shares: Some(self.cpu_set.clone()),
+                };
+                run(self.enable_tty, self.run_command[0].to_str().unwrap(), &res);
             }
             Some("init") => {
                 init(self.init_command[0].to_str().unwrap())
@@ -77,7 +101,7 @@ impl CmdConfig {
     }
 }
 
-fn run(tty: bool, cmd: &str) {
+fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     debug!("rocker run  tty:{}, cmd:{}", tty, cmd);
 
     let parent = Container::create_parent_process(tty, cmd);
@@ -86,9 +110,15 @@ fn run(tty: bool, cmd: &str) {
         std::process::exit(-1);
     }
 
+    let cgroup_manager  = CgroupManager::new("rocker-cgroup");
+    cgroup_manager.set(res).unwrap();
+    cgroup_manager.apply(parent.as_ref().unwrap().pid()).unwrap();
+
     trace!("waiting parent finish");
     let exit = parent.unwrap().wait().unwrap();
     trace!("parent process wait finished exit status is {}", exit);
+
+    cgroup_manager.destroy().unwrap();
 
     std::process::exit(-1);
 }
