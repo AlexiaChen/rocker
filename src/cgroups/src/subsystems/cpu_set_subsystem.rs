@@ -25,7 +25,7 @@ impl Subsystem for CpusetSubsystem {
                         anyhow::anyhow!("set cgroup cpuset failed {}", e)
                     })?;
                 }
-               
+
                 Ok(())
             }
             Err(e) => Err(e),
@@ -79,23 +79,26 @@ mod tests {
 
         match cpuset_subsystem.set(cgroup_path, &res) {
             Ok(_) => {
-                let path =
-                get_cgroup_path(cpuset_subsystem.name(), cgroup_path, false)
-                    .unwrap();
+                let path = get_cgroup_path(
+                    cpuset_subsystem.name(),
+                    cgroup_path,
+                    false,
+                )
+                .unwrap();
 
-            let path = Path::new(&path).join("cpuset.cpus");
-            assert_eq!(
-                Path::new(&path).exists(),
-                true,
-                "cpuset subsystem cgroup path cpuset.cpus should exist"
-            );
+                let path = Path::new(&path).join("cpuset.cpus");
+                assert_eq!(
+                    Path::new(&path).exists(),
+                    true,
+                    "cpuset subsystem cgroup path cpuset.cpus should exist"
+                );
 
-            let mut file = File::open(path).unwrap();
-            let mut contents = String::new();
-            file.read_to_string(&mut contents).unwrap();
-            let expected = "0-3";
-            assert_eq!(contents.trim(), format!("{}", expected));
-            },
+                let mut file = File::open(path).unwrap();
+                let mut contents = String::new();
+                file.read_to_string(&mut contents).unwrap();
+                let expected = "0-3";
+                assert_eq!(contents.trim(), format!("{}", expected));
+            }
             Err(e) => {
                 assert!(false, "set cgroup cpuset failed {}", e);
             }
@@ -103,16 +106,19 @@ mod tests {
 
         match cpuset_subsystem.apply(cgroup_path, process::id() as i32) {
             Ok(_) => {
-                let path =
-                get_cgroup_path(cpuset_subsystem.name(), cgroup_path, false)
-                    .unwrap();
+                let path = get_cgroup_path(
+                    cpuset_subsystem.name(),
+                    cgroup_path,
+                    false,
+                )
+                .unwrap();
                 let path = Path::new(&path).join("tasks");
                 let mut file = File::open(path).unwrap();
                 let mut contents = String::new();
                 file.read_to_string(&mut contents).unwrap();
                 let expected = format!("{}", process::id());
                 assert_eq!(contents.trim(), expected);
-            },
+            }
             Err(e) => {
                 assert!(false, "apply cgroup cpuset failed {}", e);
             }
@@ -121,20 +127,21 @@ mod tests {
         let _ = cpuset_subsystem.apply("", process::id() as i32);
         match cpuset_subsystem.remove(cgroup_path) {
             Ok(_) => {
-                let path =
-                get_cgroup_path(cpuset_subsystem.name(), cgroup_path, false)
-                    .unwrap();
+                let path = get_cgroup_path(
+                    cpuset_subsystem.name(),
+                    cgroup_path,
+                    false,
+                )
+                .unwrap();
                 assert_eq!(
                     Path::new(&path).exists(),
                     false,
                     "cpuset cgroup path should not exist"
                 );
-            },
+            }
             Err(e) => {
                 assert!(false, "remove cgroup cpuset failed {}", e);
             }
         }
-
     }
 }
-

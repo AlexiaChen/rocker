@@ -1,4 +1,8 @@
+use crate::subsystems::cpu_set_subsystem::CpusetSubsystem;
+use crate::subsystems::cpu_subsystem::CpuSubsystem;
+use crate::subsystems::memory_subsystem::MemorySubsystem;
 use anyhow::Result;
+use std::sync::Once;
 /// Structs for users to pass resource limit configurations, including memory limits,
 /// CPU time weights, number of CPU cores, etc.
 #[derive(Default, Debug)]
@@ -21,6 +25,18 @@ pub trait Subsystem {
     fn remove(&self, cgroup_path: &str) -> Result<()>;
 }
 
-pub fn get_subsystems_initialized() {
-    unimplemented!()
+static START: Once = Once::new();
+
+pub fn get_subsystems_initialized() -> &'static Vec<Box<dyn Subsystem>> {
+    unsafe {
+        static mut SUBSYSTEM_INTERAL: Vec<Box<dyn Subsystem>> = Vec::new();
+
+        START.call_once(|| {
+            SUBSYSTEM_INTERAL.push(Box::new(CpuSubsystem::new()));
+            SUBSYSTEM_INTERAL.push(Box::new(CpusetSubsystem::new()));
+            SUBSYSTEM_INTERAL.push(Box::new(MemorySubsystem::new()));
+        });
+
+        SUBSYSTEM_INTERAL.as_ref()
+    }
 }
