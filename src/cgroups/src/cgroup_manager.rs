@@ -1,4 +1,4 @@
-use crate::subsystems::subsystem::*;
+use crate::subsystems::{subsystem::*};
 use anyhow::Result;
 
 #[derive(Default, Debug)]
@@ -15,9 +15,48 @@ impl CgroupManager {
         }
     }
 
+    /// set cgroup and resource limit
     pub fn set(&self, res: &ResourceConfig) -> Result<()> {
-        // let subsystem = Subsystem::new(subsystem);
-        // subsystem.set(self.cgroup_path.as_ref().unwrap(), res)
-        unimplemented!()
+       for subsystem in get_subsystems_initialized() {
+            match subsystem.set(self.cgroup_path.as_ref().unwrap(), res) {
+                Ok(_) => {
+                    continue;
+                }
+                Err(e) => {
+                    return Err(anyhow::anyhow!("CgroupManager::set {} fail {}", self.cgroup_path.as_ref().unwrap(), e));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// apply separate process to cgroup
+    pub fn apply(&self, pid: i32) -> Result<()> {
+        for subsystem in get_subsystems_initialized() {
+            match subsystem.apply(self.cgroup_path.as_ref().unwrap(), pid) {
+                Ok(_) => {
+                    continue;
+                }
+                Err(e) => {
+                    return Err(anyhow::anyhow!("CgroupManager::apply {} fail {}", self.cgroup_path.as_ref().unwrap(), e));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// destory the cgroup
+    pub fn destroy(&self) -> Result<()> {
+        for subsystem in get_subsystems_initialized() {
+            match subsystem.remove(self.cgroup_path.as_ref().unwrap()) {
+                Ok(_) => {
+                    continue;
+                }
+                Err(e) => {
+                    return Err(anyhow::anyhow!("CgroupManager::remove {} fail {}", self.cgroup_path.as_ref().unwrap(), e));
+                }
+            }
+        }
+        Ok(())
     }
 }
