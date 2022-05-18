@@ -43,7 +43,10 @@ impl CmdConfig {
         .version("0.0.1")
         .cmd(
             Cmd::new("run")
-            .desc("run container. example: sudo RUST_LOG=trace ./rocker run --tty /bin/sh")
+            .desc("run container. example:\n 
+            sudo RUST_LOG=trace ./rocker run --tty /bin/sh \n 
+            sudo RUST_LOG=trace ./rocker run --tty \"ls -l\"\n
+            sudo RUST_LOG=trace ./rocker run --tty bash")
             .opt(
                 Opt::new("tty", &mut config.enable_tty)
                 .long("tty")
@@ -83,7 +86,7 @@ impl CmdConfig {
     }
 
     fn check_and_call(&self, cmd: Option<&str>) -> Result<(), String> {
-        println!("Match Cmd: {:?}", cmd);
+        debug!("Match Cmd: {}", cmd.unwrap());
         match cmd {
             Some("run") => {
                 let res = ResourceConfig {
@@ -111,8 +114,8 @@ impl CmdConfig {
 fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     debug!("rocker run  tty:{}, cmd:{}", tty, cmd);
 
-    let parent = Container::create_parent_process(tty, cmd);
-    if parent.is_err() {
+    let mut parent = Container::create_parent_process(tty, cmd);
+    if parent.0.as_ref().is_err() {
         error!("create parent process failed");
         std::process::exit(-1);
     }
@@ -120,11 +123,15 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     let cgroup_manager = CgroupManager::new("rocker-cgroup");
     cgroup_manager.set(res).unwrap();
     cgroup_manager
-        .apply(parent.as_ref().unwrap().pid())
+        .apply(parent.0.as_ref().unwrap().pid())
         .unwrap();
 
+    // let write_pipe_fd = parent.1;
+    // let mut write_pipe = parent.0.as_mut().unwrap().take_pipe_writer(write_pipe_fd).unwrap();
+    // write_pipe.write_all(cmd.as_bytes()).unwrap();
+
     trace!("waiting parent finish");
-    let exit = parent.unwrap().wait().unwrap();
+    let exit = parent.0.as_mut().unwrap().wait().unwrap();
     trace!("parent process wait finished exit status is {}", exit);
 
     cgroup_manager.destroy().unwrap();
