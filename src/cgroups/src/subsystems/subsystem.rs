@@ -28,7 +28,6 @@ pub trait Subsystem {
 static START: Once = Once::new();
 
 pub fn get_subsystems_initialized() -> &'static Vec<Box<dyn Subsystem>> {
-    
     unsafe {
         static mut SUBSYSTEM_INTERAL: Vec<Box<dyn Subsystem>> = Vec::new();
 
@@ -37,7 +36,7 @@ pub fn get_subsystems_initialized() -> &'static Vec<Box<dyn Subsystem>> {
             SUBSYSTEM_INTERAL.push(Box::new(CpusetSubsystem::new()));
             SUBSYSTEM_INTERAL.push(Box::new(MemorySubsystem::new()));
         });
-    
+
         SUBSYSTEM_INTERAL.as_ref()
     }
 }

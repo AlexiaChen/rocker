@@ -5,10 +5,10 @@ extern crate log;
 extern crate app;
 use anyhow::Result;
 use app::{App, Args, Cmd, Opt};
-use container::Container;
-use std::path::PathBuf;
 use cgroups::cgroup_manager::CgroupManager;
 use cgroups::subsystems::subsystem::ResourceConfig;
+use container::Container;
+use std::path::PathBuf;
 
 #[derive(Debug, Default, Clone)]
 pub struct CmdConfig {
@@ -88,7 +88,11 @@ impl CmdConfig {
                     cpu_set: Some(self.cpu_shares.clone()),
                     cpu_shares: Some(self.cpu_set.clone()),
                 };
-                run(self.enable_tty, self.run_command[0].to_str().unwrap(), &res);
+                run(
+                    self.enable_tty,
+                    self.run_command[0].to_str().unwrap(),
+                    &res,
+                );
             }
             Some("init") => {
                 init(self.init_command[0].to_str().unwrap())
@@ -110,9 +114,11 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
         std::process::exit(-1);
     }
 
-    let cgroup_manager  = CgroupManager::new("rocker-cgroup");
+    let cgroup_manager = CgroupManager::new("rocker-cgroup");
     cgroup_manager.set(res).unwrap();
-    cgroup_manager.apply(parent.as_ref().unwrap().pid()).unwrap();
+    cgroup_manager
+        .apply(parent.as_ref().unwrap().pid())
+        .unwrap();
 
     trace!("waiting parent finish");
     let exit = parent.unwrap().wait().unwrap();

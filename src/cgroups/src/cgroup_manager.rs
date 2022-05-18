@@ -1,4 +1,4 @@
-use crate::subsystems::{subsystem::*};
+use crate::subsystems::subsystem::*;
 use anyhow::Result;
 
 #[derive(Default, Debug)]
@@ -17,13 +17,17 @@ impl CgroupManager {
 
     /// set cgroup and resource limit
     pub fn set(&self, res: &ResourceConfig) -> Result<()> {
-       for subsystem in get_subsystems_initialized() {
+        for subsystem in get_subsystems_initialized() {
             match subsystem.set(self.cgroup_path.as_ref().unwrap(), res) {
                 Ok(_) => {
                     continue;
                 }
                 Err(e) => {
-                    return Err(anyhow::anyhow!("CgroupManager::set {} fail {}", self.cgroup_path.as_ref().unwrap(), e));
+                    return Err(anyhow::anyhow!(
+                        "CgroupManager::set {} fail {}",
+                        self.cgroup_path.as_ref().unwrap(),
+                        e
+                    ));
                 }
             }
         }
@@ -38,7 +42,11 @@ impl CgroupManager {
                     continue;
                 }
                 Err(e) => {
-                    return Err(anyhow::anyhow!("CgroupManager::apply {} fail {}", self.cgroup_path.as_ref().unwrap(), e));
+                    return Err(anyhow::anyhow!(
+                        "CgroupManager::apply {} fail {}",
+                        self.cgroup_path.as_ref().unwrap(),
+                        e
+                    ));
                 }
             }
         }
@@ -53,7 +61,11 @@ impl CgroupManager {
                     continue;
                 }
                 Err(e) => {
-                    return Err(anyhow::anyhow!("CgroupManager::remove {} fail {}", self.cgroup_path.as_ref().unwrap(), e));
+                    return Err(anyhow::anyhow!(
+                        "CgroupManager::remove {} fail {}",
+                        self.cgroup_path.as_ref().unwrap(),
+                        e
+                    ));
                 }
             }
         }

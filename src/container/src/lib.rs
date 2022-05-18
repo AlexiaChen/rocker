@@ -39,13 +39,8 @@ impl Container {
     ///     2 pts/2 00:00:00 ps
     /// ```
     pub fn init_process(cmd: &str, _args: &[&'static str]) -> Result<()> {
-        // mount proc file system for checking resources from ps command
-        let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
-        let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""));
-        res.map_err(|e| {
-            eprintln!("mount faled with errno: {}", e);
-        })
-        .unwrap();
+        
+        Self::setup_mount();
 
         let argv = [CString::new(cmd).unwrap()];
         let envs: Vec<CString> = std::env::vars()
@@ -64,6 +59,28 @@ impl Container {
             _ => {}
         }
         Ok(())
+    }
+
+    fn setup_mount() {
+        // mount proc file system for checking resources from ps command
+        let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
+        let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""));
+        res.map_err(|e| {
+            eprintln!("mount proc failed with errno: {}", e);
+        })
+        .unwrap();
+
+        mount(
+            Some("tmpfs"),
+            "/dev",
+            Some("tmpfs"),
+            MsFlags::MS_NOSUID | MsFlags::MS_STRICTATIME,
+            Some("mode=755"),
+        )
+        .map_err(|e| {
+            eprintln!("mount tmpfs failed with errno: {}", e);
+        })
+        .unwrap();
     }
 
     /// create parent process ( init command container process)
