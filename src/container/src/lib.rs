@@ -24,22 +24,6 @@ impl Container {
     /// which will be overwritten by the process of the cmd program that will be run. In other words, when this system call is called,
     /// the user-specified cmd will be run, replacing the initial init command process through the clone namespace, so that when we enter the container,
     /// we will find that the first process inside the container is the cmd process we specified with the init command
-
-    /// ```bash
-    /// mathxh@MathxH:~/Project/rocker/target/debug$ sudo RUST_LOG=trace . /rocker run --tty /bin/sh
-    /// [sudo] password for mathxh:
-    ///  INFO rocker > hello rocker
-    /// Match Cmd: Some("run")
-    ///  DEBUG rocker > rocker run tty:true, cmd:/bin/sh
-    ///  TRACE rocker > waiting parent finish
-    ///  INFO rocker > hello rocker
-    /// Match Cmd: Some("init")
-    ///  DEBUG rocker > rocker init cmd:/bin/sh
-    /// # ps -a
-    ///   PID TTY TIME CMD
-    ///     1 pts/2 00:00:00 sh
-    ///     2 pts/2 00:00:00 ps
-    /// ```
     pub fn init_process(cmd: &str, _args: &[&'static str]) -> Result<()> {
         let cmd_vec = cmd.split(" ").collect::<Vec<&str>>();
         
