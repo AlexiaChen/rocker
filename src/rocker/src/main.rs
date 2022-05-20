@@ -13,9 +13,9 @@ use std::path::PathBuf;
 #[derive(Debug, Default, Clone)]
 pub struct CmdConfig {
     pub enable_tty: bool,
-    pub memory_limit: String,
-    pub cpu_shares: String,
-    pub cpu_set: String,
+    pub memory_limit: Option<String>,
+    pub cpu_share: Option<String>,
+    pub cpu_set: Option<String>,
     pub run_command: Vec<PathBuf>,
     init_command: Vec<PathBuf>,
 }
@@ -57,18 +57,18 @@ impl CmdConfig {
                 .optional()
                 .long("memory")
                 .short('m')
-                .help("memory limit")
+                .help("memory limit (default 1024m)")
             )
             .opt(
-                Opt::new("cpu_shares", &mut config.cpu_shares)
+                Opt::new("cpu_share", &mut config.cpu_share)
                 .optional()
-                .long("cpushares")
-                .help("cpushares limit")
+                .long("cpushare")
+                .help("cpu time weight limit (default 1024)")
             )
             .opt(Opt::new("cpu_set", &mut config.cpu_set)
                 .optional()
                 .long("cpuset")
-                .help("cpuset limit")
+                .help("cpu cores limit (default 1-2)")
             )
             .args(
                 Args::new("command", &mut config.run_command)
@@ -90,9 +90,9 @@ impl CmdConfig {
         match cmd {
             Some("run") => {
                 let res = ResourceConfig {
-                    memory_limit: Some(self.memory_limit.clone()),
-                    cpu_set: Some(self.cpu_shares.clone()),
-                    cpu_shares: Some(self.cpu_set.clone()),
+                    memory_limit: Some(self.memory_limit.clone().unwrap_or(String::from("1024m"))),
+                    cpu_set: Some(self.cpu_share.clone().unwrap_or(String::from("1-2"))),
+                    cpu_shares: Some(self.cpu_set.clone().unwrap_or(String::from("1024"))),
                 };
                 run(
                     self.enable_tty,
