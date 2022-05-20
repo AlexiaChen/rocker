@@ -7,8 +7,11 @@ use std::sync::Once;
 /// CPU time weights, number of CPU cores, etc.
 #[derive(Default, Debug)]
 pub struct ResourceConfig {
+    /// memory limit in bytes
     pub memory_limit: Option<String>,
+    /// cpu time weight
     pub cpu_shares: Option<String>,
+    /// cpu cores
     pub cpu_set: Option<String>,
 }
 
