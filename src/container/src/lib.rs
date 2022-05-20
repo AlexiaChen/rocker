@@ -103,7 +103,7 @@ impl Container {
 
         let mut stdin_cfg = Stdio::piped();
         let mut stdout_cfg = Stdio::piped();
-        let mut stderr_cfg = Stdio::null();
+        let mut stderr_cfg = Stdio::piped();
         if tty {
             stdin_cfg = Stdio::inherit(); 
             stdout_cfg = Stdio::inherit();
