@@ -1,0 +1,3 @@
+## Container Images
+
+We have created a simple container with namespace and cgroups technology, but we will find that the directory inside the container is still the directory of the current running program, and if we run the mount command, we can see all the mount points inherited from the parent process, which seems to be different from the usual performance of the container, because it is missing such an important feature as mirroring. Docker image can be said to be very good design, it makes container delivery and migration easier, now we need to make a short answer to your image, and then let it run in the environment with the image.
