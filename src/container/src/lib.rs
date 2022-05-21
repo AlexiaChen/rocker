@@ -1,8 +1,8 @@
 use anyhow::Result;
 use nix::mount::*;
-use nix::unistd::execve;
-use nix::unistd::pipe;
+use nix::unistd::{execve, pipe, pivot_root, chdir};
 use std::ffi::CString;
+use std::path::PathBuf;
 use unshare::{Child, Command, GidMap, Namespace, Stdio, Fd, UidMap};
 use which::which;
 
@@ -55,7 +55,57 @@ impl Container {
         Ok(())
     }
 
+    fn pivot_root(new_root: &PathBuf) -> Result<()> {
+        mount(
+            Some(new_root.as_os_str().to_str().unwrap()),
+            new_root.as_os_str().to_str().unwrap(),
+            Some("bind"),
+            MsFlags::MS_BIND | MsFlags::MS_REC,
+            Some(""),
+        )
+        .map_err(|e| {
+            eprintln!("mount rootfs itself failed with errno: {}", e);
+        })
+        .unwrap();
+        
+        let old_root =  new_root.join(".pivot_root");
+        println!("put_old path in the container is {:?}", old_root);
+
+
+        pivot_root(new_root.as_os_str().to_str().unwrap(), old_root.as_os_str().to_str().unwrap())
+            .map_err(|e| {
+                eprintln!("pivot_root failed with errno: {}", e);
+            })
+            .unwrap();
+        
+        chdir("/").unwrap();
+
+        let old_root = PathBuf::from("/").join(".pivot_root");
+        umount2(
+            old_root.as_os_str().to_str().unwrap(),
+            MntFlags::MNT_DETACH,
+        ).map_err(|e| {
+            eprintln!("unmount put_old failed with errno: {}", e);
+        }).unwrap();
+
+        std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap()).map_err(|e| {
+            eprintln!("remove put_old failed with errno: {}", e);
+        }).unwrap();
+        
+        Ok(())
+    }
+
     fn setup_mount() {
+        let pwd = std::env::current_dir();
+        if pwd.is_err() {
+            eprintln!("Could not get current directory in the container");
+        }
+
+        let pwd = pwd.unwrap();
+        println!("current location  (new root) dir  in the container is {:?}", pwd);
+        
+        let _ = Self::pivot_root(&pwd);
+        
         // mount proc file system for checking resources from ps command
         let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
         let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""));

@@ -1,7 +1,7 @@
 use crate::subsystems::subsystem::*;
 use anyhow::Result;
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct CgroupManager {
     cgroup_path: Option<String>,
     resource: Box<ResourceConfig>,
