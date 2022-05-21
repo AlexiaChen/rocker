@@ -90,9 +90,17 @@ impl CmdConfig {
         match cmd {
             Some("run") => {
                 let res = ResourceConfig {
-                    memory_limit: Some(self.memory_limit.clone().unwrap_or(String::from("1024m"))),
-                    cpu_set: Some(self.cpu_share.clone().unwrap_or(String::from("1-2"))),
-                    cpu_shares: Some(self.cpu_set.clone().unwrap_or(String::from("1024"))),
+                    memory_limit: Some(
+                        self.memory_limit
+                            .clone()
+                            .unwrap_or(String::from("1024m")),
+                    ),
+                    cpu_set: Some(
+                        self.cpu_share.clone().unwrap_or(String::from("1-2")),
+                    ),
+                    cpu_shares: Some(
+                        self.cpu_set.clone().unwrap_or(String::from("1024")),
+                    ),
                 };
                 run(
                     self.enable_tty,

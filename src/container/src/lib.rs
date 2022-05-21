@@ -1,9 +1,9 @@
 use anyhow::Result;
 use nix::mount::*;
-use nix::unistd::{execve, pipe, pivot_root, chdir};
+use nix::unistd::{chdir, execve, pipe, pivot_root};
 use std::ffi::CString;
 use std::path::PathBuf;
-use unshare::{Child, Command, GidMap, Namespace, Stdio, Fd, UidMap};
+use unshare::{Child, Command, Fd, GidMap, Namespace, Stdio, UidMap};
 use which::which;
 
 const ROOT_PRV: u32 = 0;
@@ -26,16 +26,17 @@ impl Container {
     /// we will find that the first process inside the container is the cmd process we specified with the init command
     pub fn init_process(cmd: &str, _args: &[&'static str]) -> Result<()> {
         let cmd_vec = cmd.split(" ").collect::<Vec<&str>>();
-        
+
         Self::setup_mount();
 
-        let argv: Vec<CString> = cmd_vec.iter().map(|x| {
-           CString::new(*x).unwrap()
-        }).collect();
+        let argv: Vec<CString> =
+            cmd_vec.iter().map(|x| CString::new(*x).unwrap()).collect();
 
         // search path for specific executable
         let path = which(cmd_vec[0]).unwrap();
-        let path = CString::new(path.into_os_string().into_string().unwrap().as_str()).unwrap();
+        let path =
+            CString::new(path.into_os_string().into_string().unwrap().as_str())
+                .unwrap();
 
         let envs: Vec<CString> = std::env::vars()
             .map(|(k, v)| {
@@ -57,41 +58,40 @@ impl Container {
 
     fn pivot_root(new_root: &PathBuf) -> Result<()> {
         mount(
+            None::<&str>,
+            "/",
+            None::<&str>,
+            MsFlags::MS_PRIVATE | MsFlags::MS_REC,
+            None::<&str>,
+        )
+        .expect("mount / as MS_PRIVATE");
+
+        mount(
             Some(new_root.as_os_str().to_str().unwrap()),
             new_root.as_os_str().to_str().unwrap(),
             Some("bind"),
             MsFlags::MS_BIND | MsFlags::MS_REC,
             Some(""),
         )
-        .map_err(|e| {
-            eprintln!("mount rootfs itself failed with errno: {}", e);
-        })
-        .unwrap();
-        
-        let old_root =  new_root.join(".pivot_root");
-        println!("put_old path in the container is {:?}", old_root);
+        .expect("mount new root bind");
 
+        let old_root = new_root.join(".pivot_root");
+        println!("old root path in the container is {:?}", old_root);
 
-        pivot_root(new_root.as_os_str().to_str().unwrap(), old_root.as_os_str().to_str().unwrap())
-            .map_err(|e| {
-                eprintln!("pivot_root failed with errno: {}", e);
-            })
-            .unwrap();
-        
-        chdir("/").unwrap();
+        pivot_root(
+            new_root.as_os_str().to_str().unwrap(),
+            old_root.as_os_str().to_str().unwrap(),
+        )
+        .expect("pivot_root new ront");
+        chdir("/").expect("change root to /");
 
         let old_root = PathBuf::from("/").join(".pivot_root");
-        umount2(
-            old_root.as_os_str().to_str().unwrap(),
-            MntFlags::MNT_DETACH,
-        ).map_err(|e| {
-            eprintln!("unmount put_old failed with errno: {}", e);
-        }).unwrap();
+        umount2(old_root.as_os_str().to_str().unwrap(), MntFlags::MNT_DETACH)
+            .expect("umount old root with detach");
 
-        std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap()).map_err(|e| {
-            eprintln!("remove put_old failed with errno: {}", e);
-        }).unwrap();
-        
+        std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap())
+            .expect("remove old root dir");
+
         Ok(())
     }
 
@@ -102,17 +102,17 @@ impl Container {
         }
 
         let pwd = pwd.unwrap();
-        println!("current location  (new root) dir  in the container is {:?}", pwd);
-        
+        println!(
+            "current location  (new root) dir  in the container is {:?}",
+            pwd
+        );
+
         let _ = Self::pivot_root(&pwd);
-        
+
         // mount proc file system for checking resources from ps command
         let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
-        let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""));
-        res.map_err(|e| {
-            eprintln!("mount proc failed with errno: {}", e);
-        })
-        .unwrap();
+        let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""))
+            .expect("mount proc to /proc");
 
         mount(
             Some("tmpfs"),
@@ -121,10 +121,7 @@ impl Container {
             MsFlags::MS_NOSUID | MsFlags::MS_STRICTATIME,
             Some("mode=755"),
         )
-        .map_err(|e| {
-            eprintln!("mount tmpfs failed with errno: {}", e);
-        })
-        .unwrap();
+        .expect("mount tmpfs to /dev");
     }
 
     /// create parent process ( init command container process)
@@ -139,10 +136,18 @@ impl Container {
         let mut stdout_cfg = Stdio::piped();
         let mut stderr_cfg = Stdio::piped();
         if tty {
-            stdin_cfg = Stdio::inherit(); 
+            stdin_cfg = Stdio::inherit();
             stdout_cfg = Stdio::inherit();
             stderr_cfg = Stdio::inherit();
         }
+
+        let pwd = std::env::current_dir();
+        if pwd.is_err() {
+            eprintln!("Could not get current directory in the container");
+        }
+
+        let pwd = pwd.unwrap().join("busybox");
+
         //   fork a new namespace-isolated process to call current rocker process self  from "/proc/self/exe"
         // rocker init <cmd>
         let handle = Command::new("/proc/self/exe")
@@ -172,6 +177,7 @@ impl Container {
             )
             .file_descriptor(read_pipe_fd, Fd::ReadPipe)
             .file_descriptor(write_pipe_fd, Fd::WritePipe)
+            .current_dir(pwd)
             .spawn()
             .unwrap();
 
