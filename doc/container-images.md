@@ -75,5 +75,8 @@ PID   USER     TIME  COMMAND
     2 root      0:00 ps -ef
 / # ls
 bin   dev   etc   home  proc  root  sys   tmp   usr   var
-/ #
+/ # mount
+/dev/sdb on / type ext4 (rw,relatime,discard,errors=remount-ro,data=ordered)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /dev type tmpfs (rw,nosuid,mode=755)
 ```
