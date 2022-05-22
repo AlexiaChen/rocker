@@ -42,3 +42,38 @@ mathxh@MathxH:~/Project/rocker$ docker ps
 CONTAINER ID   IMAGE     COMMAND    CREATED         STATUS         PORTS     NAMES
 11b35852c1fe   busybox   "top -b"   3 minutes ago   Up 3 minutes             tender_goldberg
 ```
+
+need to make `busybox.tar` extract into `busybox` directory under the current work dir of `rocker` binary, like this:
+
+```bash
+mathxh@MathxH:~/Project/rocker/target/debug$ ls
+build    cg.d      incremental      libcontainer.d     libnamespace.rlib  ns      rocker.d
+busybox  deps      libcgroups.d     libcontainer.rlib  libnetwork.d       ns.d
+cg       examples  libcgroups.rlib  libnamespace.d     libnetwork.rlib    rocker
+mathxh@MathxH:~/Project/rocker/target/debug$ ls ./busybox/
+bin  dev  etc  home  proc  root  sys  tmp  usr  var
+```
+
+```bash
+mathxh@MathxH:~/Project/rocker/target/debug$ sudo RUST_LOG=trace RUST_BACKTRACE=1 ./rocker run --tty /bin/sh
+ INFO  rocker > hello rocker
+ DEBUG rocker > Match Cmd: run
+ DEBUG rocker > rocker run  tty:true, cmd:/bin/sh
+ TRACE container > old root path out of the container is "/home/mathxh/Project/rocker/target/debug/busybox/.pivot_root"
+ TRACE users::base > Running getuid
+ TRACE users::base > Running getgid
+ TRACE container   > current uid is 0, gid is 0 in the hosted system
+ INFO  rocker > hello rocker
+ DEBUG rocker > Match Cmd: init
+ DEBUG rocker > rocker init cmd:/bin/sh
+ TRACE container > current location  (new root) dir  in the container is "/home/mathxh/Project/rocker/target/debug/busybox"
+ TRACE container > old root path in the container is "/home/mathxh/Project/rocker/target/debug/busybox/.pivot_root"
+ TRACE rocker      > waiting parent finish
+/ # ps -ef
+PID   USER     TIME  COMMAND
+    1 root      0:00 /bin/sh
+    2 root      0:00 ps -ef
+/ # ls
+bin   dev   etc   home  proc  root  sys   tmp   usr   var
+/ #
+```
