@@ -146,8 +146,7 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     let pwd = pwd.unwrap().join("busybox");
     let old_root = pwd.join(".pivot_root");
     std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap())
-            .expect("remove old root dir");
-
+        .expect("remove old root dir");
 
     cgroup_manager.destroy().unwrap();
 

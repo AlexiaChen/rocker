@@ -6,11 +6,11 @@ use anyhow::Result;
 use nix::mount::*;
 use nix::unistd::{chdir, execve, pipe, pivot_root};
 use std::ffi::CString;
+use std::os::unix::prelude::PermissionsExt;
 use std::path::PathBuf;
 use unshare::{Child, Command, Fd, GidMap, Namespace, Stdio, UidMap};
+use users::{get_current_gid, get_current_uid};
 use which::which;
-use std::os::unix::prelude::PermissionsExt;
-use users::{get_current_uid, get_current_gid};
 
 pub struct Container {}
 
@@ -103,8 +103,10 @@ impl Container {
         }
 
         let pwd = pwd.unwrap();
-        trace!("current location  (new root) dir  in the container is {:?}", pwd);
-
+        trace!(
+            "current location  (new root) dir  in the container is {:?}",
+            pwd
+        );
 
         let _ = Self::pivot_root(&pwd);
 
@@ -149,7 +151,8 @@ impl Container {
 
         let old_root = pwd.join(".pivot_root");
         if !old_root.exists() {
-            std::fs::create_dir_all(old_root.clone()).expect("create old_root dir out of container");
+            std::fs::create_dir_all(old_root.clone())
+                .expect("create old_root dir out of container");
         }
         old_root.metadata().unwrap().permissions().set_mode(0o777);
 
@@ -157,7 +160,11 @@ impl Container {
 
         let current_uid = get_current_uid();
         let current_gid = get_current_gid();
-        trace!("current uid is {}, gid is {} in the hosted system", current_uid, current_gid);
+        trace!(
+            "current uid is {}, gid is {} in the hosted system",
+            current_uid,
+            current_gid
+        );
 
         //   fork a new namespace-isolated process to call current rocker process self  from "/proc/self/exe"
         // rocker init <cmd>
