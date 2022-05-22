@@ -142,6 +142,13 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     let exit = parent.0.as_mut().unwrap().wait().unwrap();
     trace!("parent process wait finished exit status is {}", exit);
 
+    let pwd = std::env::current_dir();
+    let pwd = pwd.unwrap().join("busybox");
+    let old_root = pwd.join(".pivot_root");
+    std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap())
+            .expect("remove old root dir");
+
+
     cgroup_manager.destroy().unwrap();
 
     std::process::exit(-1);

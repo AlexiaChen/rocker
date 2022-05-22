@@ -1,3 +1,7 @@
+extern crate pretty_env_logger;
+#[macro_use]
+extern crate log;
+
 use anyhow::Result;
 use nix::mount::*;
 use nix::unistd::{chdir, execve, pipe, pivot_root};
@@ -5,8 +9,8 @@ use std::ffi::CString;
 use std::path::PathBuf;
 use unshare::{Child, Command, Fd, GidMap, Namespace, Stdio, UidMap};
 use which::which;
-
-const ROOT_PRV: u32 = 0;
+use std::os::unix::prelude::PermissionsExt;
+use users::{get_current_uid, get_current_gid};
 
 pub struct Container {}
 
@@ -76,21 +80,18 @@ impl Container {
         .expect("mount new root bind");
 
         let old_root = new_root.join(".pivot_root");
-        println!("old root path in the container is {:?}", old_root);
+        trace!("old root path in the container is {:?}", old_root);
 
         pivot_root(
             new_root.as_os_str().to_str().unwrap(),
             old_root.as_os_str().to_str().unwrap(),
         )
-        .expect("pivot_root new ront");
+        .expect("pivot_root new root");
         chdir("/").expect("change root to /");
 
         let old_root = PathBuf::from("/").join(".pivot_root");
         umount2(old_root.as_os_str().to_str().unwrap(), MntFlags::MNT_DETACH)
             .expect("umount old root with detach");
-
-        std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap())
-            .expect("remove old root dir");
 
         Ok(())
     }
@@ -98,20 +99,18 @@ impl Container {
     fn setup_mount() {
         let pwd = std::env::current_dir();
         if pwd.is_err() {
-            eprintln!("Could not get current directory in the container");
+            error!("Could not get current directory in the container");
         }
 
         let pwd = pwd.unwrap();
-        println!(
-            "current location  (new root) dir  in the container is {:?}",
-            pwd
-        );
+        trace!("current location  (new root) dir  in the container is {:?}", pwd);
+
 
         let _ = Self::pivot_root(&pwd);
 
         // mount proc file system for checking resources from ps command
         let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
-        let res = mount(Some("proc"), "/proc", Some("proc"), flags, Some(""))
+        mount(Some("proc"), "/proc", Some("proc"), flags, Some(""))
             .expect("mount proc to /proc");
 
         mount(
@@ -143,10 +142,22 @@ impl Container {
 
         let pwd = std::env::current_dir();
         if pwd.is_err() {
-            eprintln!("Could not get current directory in the container");
+            error!("Could not get current directory in the container");
         }
 
         let pwd = pwd.unwrap().join("busybox");
+
+        let old_root = pwd.join(".pivot_root");
+        if !old_root.exists() {
+            std::fs::create_dir_all(old_root.clone()).expect("create old_root dir out of container");
+        }
+        old_root.metadata().unwrap().permissions().set_mode(0o777);
+
+        trace!("old root path out of the container is {:?}", old_root);
+
+        let current_uid = get_current_uid();
+        let current_gid = get_current_gid();
+        trace!("current uid is {}, gid is {} in the hosted system", current_uid, current_gid);
 
         //   fork a new namespace-isolated process to call current rocker process self  from "/proc/self/exe"
         // rocker init <cmd>
@@ -165,13 +176,13 @@ impl Container {
             ])
             .set_id_maps(
                 vec![UidMap {
-                    inside_uid: ROOT_PRV,
-                    outside_uid: ROOT_PRV,
+                    inside_uid: 0,
+                    outside_uid: current_uid,
                     count: 1,
                 }],
                 vec![GidMap {
-                    inside_gid: ROOT_PRV,
-                    outside_gid: ROOT_PRV,
+                    inside_gid: 0,
+                    outside_gid: current_gid,
                     count: 1,
                 }],
             )
