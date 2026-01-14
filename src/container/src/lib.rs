@@ -165,7 +165,7 @@ impl Container {
     }
 
     /// create parent process ( init command container process)
-    pub fn create_parent_process(tty: bool, cmd: &str) -> (Result<Child>, i32) {
+    pub fn create_parent_process(tty: bool, cmd: &str) -> Result<Child> {
         let args = ["init", cmd];
 
         let fd = pipe();
@@ -232,8 +232,8 @@ impl Container {
             .file_descriptor(read_pipe_fd, Fd::ReadPipe)
             .file_descriptor(write_pipe_fd, Fd::WritePipe)
             .spawn()
-            .unwrap();
+            .map_err(|e| anyhow::anyhow!("Failed to spawn container process: {}", e))?;
 
-        (Ok(handle), write_pipe_fd)
+        Ok(handle)
     }
 }

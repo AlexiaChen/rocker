@@ -101,14 +101,18 @@ enum Commands {
     },
 
     /// Execute a command in a running container
+    ///
+    /// Example:
+    /// sudo rocker exec <container> /bin/ps aux
+    /// sudo rocker exec <container> ls -la /
     Exec {
         /// Container name
         #[arg(required = true)]
         container_name: String,
 
-        /// Command to execute
-        #[arg(required = true)]
-        command: String,
+        /// Command to execute (with arguments)
+        #[arg(required = true, num_args = 1..)]
+        command: Vec<String>,
     },
 }
 
@@ -156,7 +160,10 @@ fn run_command(command: Commands) -> Result<()> {
         Commands::Exec {
             container_name,
             command,
-        } => exec_container(&container_name, &command),
+        } => {
+            let cmd_str = command.join(" ");
+            exec_container(&container_name, &cmd_str)
+        }
     }
 }
 
@@ -168,13 +175,14 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     let container_name = container_id.clone();
 
     // Create parent process
-    let mut parent = Container::create_parent_process(tty, cmd);
-    if parent.0.as_ref().is_err() {
+    let parent = Container::create_parent_process(tty, cmd);
+    if parent.is_err() {
         error!("create parent process failed");
         std::process::exit(-1);
     }
+    let mut parent = parent.unwrap();
 
-    let pid = parent.0.as_ref().unwrap().pid();
+    let pid = parent.pid();
 
     // Record container info BEFORE starting cgroups/network
     let container_info = ContainerInfo {
@@ -198,12 +206,72 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     // Apply cgroups
     let cgroup_manager = CgroupManager::new(&container_id);
     cgroup_manager.set(res).unwrap();
-    cgroup_manager
-        .apply(parent.0.as_ref().unwrap().pid())
-        .unwrap();
+    cgroup_manager.apply(pid).unwrap();
+
+    // For non-TTY mode, capture output to log file
+    if !tty {
+        let log_path = ContainerStore::log_path(&container_name);
+        let mut stdout_opt = parent.stdout.take();
+        let mut stderr_opt = parent.stderr.take();
+
+        use std::io::{Read, Write};
+        use std::fs::File;
+        use std::thread::{spawn, JoinHandle};
+
+        let mut handles: Vec<JoinHandle<()>> = Vec::new();
+
+        // Capture stdout
+        if let Some(mut stdout) = stdout_opt {
+            match File::create(&log_path) {
+                Ok(mut log_file) => {
+                    let handle = spawn(move || {
+                        let mut buffer = [0; 4096];
+                        loop {
+                            match stdout.read(&mut buffer) {
+                                Ok(0) => break,
+                                Ok(n) => {
+                                    let _ = log_file.write_all(&buffer[..n]);
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                    });
+                    handles.push(handle);
+                }
+                Err(e) => {
+                    warn!("Failed to create log file {}: {}", log_path.display(), e);
+                }
+            }
+        }
+
+        // Capture stderr - append to same log file
+        if let Some(mut stderr) = stderr_opt {
+            match File::options().create(false).append(true).open(&log_path) {
+                Ok(mut log_file) => {
+                    let handle = spawn(move || {
+                        let mut buffer = [0; 4096];
+                        loop {
+                            match stderr.read(&mut buffer) {
+                                Ok(0) => break,
+                                Ok(n) => {
+                                    let _ = log_file.write_all(&buffer[..n]);
+                                }
+                                Err(_) => break,
+                            }
+                        }
+                    });
+                    handles.push(handle);
+                }
+                Err(_) => {}
+            }
+        }
+
+        // Don't wait for log threads - let them run independently
+        // They will finish when the child process closes its stdout/stderr
+    }
 
     trace!("waiting parent finish");
-    let exit = parent.0.as_mut().unwrap().wait();
+    let exit = parent.wait();
     let exit = match exit {
         Ok(e) => e,
         Err(e) => {
@@ -229,12 +297,19 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     // Destroy cgroups (may not exist if container failed early)
     let _ = cgroup_manager.destroy();
 
-    // Delete container info if TTY mode (container exited)
-    // This must always be done for TTY mode to avoid zombie containers
+    // Update container status based on TTY mode:
+    // - TTY mode: Delete metadata (container exits with user)
+    // - Non-TTY mode: Update status to Exited (keep metadata for logs)
     if tty {
         match ContainerStore::delete(&container_name) {
             Ok(_) => trace!("Container {} metadata deleted", container_name),
             Err(e) => warn!("Failed to delete container {} metadata: {}", container_name, e),
+        }
+    } else {
+        // Update status to Exited for non-TTY containers
+        match ContainerStore::update_status(&container_name, ContainerStatus::Exited) {
+            Ok(_) => trace!("Container {} status updated to Exited", container_name),
+            Err(e) => warn!("Failed to update container {} status: {}", container_name, e),
         }
     }
 
