@@ -47,6 +47,13 @@ The project implements container isolation using Linux kernel features:
 | `rocker exec` | Execute commands in running containers | ✅ Implemented |
 | `rocker commit` | Save container as image | ✅ Implemented |
 
+### Image Management
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `rocker import` | Import tar file as image | ✅ Implemented |
+| `rocker images` | List all images | ✅ Implemented |
+
 ### Resource Management
 
 - **Memory limits**: Restrict container memory usage
@@ -123,54 +130,114 @@ rocker --version
 
 ## Quick Start
 
-### Prepare Root Filesystem
+### Import an Image
 
-Before running containers, you need a root filesystem:
+First, import a container image from a tar file:
 
 ```bash
-# Extract busybox rootfs (example)
-rm -rf ./busybox
-mkdir -p busybox && tar -xf base-image/busybox.tar -C busybox
+# Import busybox image
+sudo rocker import base-image/busybox.tar busybox
+
+# List available images
+sudo rocker images
+
+# Output:
+# REPOSITORY  TAG     IMAGE ID  SIZE     CREATED
+# busybox     latest  b38350bb  441.1MB  2026-01-14 17:07:17
 ```
 
 ### Run a Container
 
 ```bash
 # Run an interactive shell
-sudo RUST_LOG=trace ./target/release/rocker run --tty /bin/sh
+sudo rocker run --image busybox /bin/sh
+
+# Run with TTY enabled
+sudo rocker run --tty --image busybox /bin/sh
 
 # Run a specific command
-sudo ./target/release/rocker run --tty "ls -l"
+sudo rocker run --image busybox "ls -l"
 
 # Run with memory limit
-sudo ./target/release/rocker run --tty -m 100m /bin/sh
+sudo rocker run --image busybox -m 100m /bin/sh
 
 # Run with CPU shares
-sudo ./target/release/rocker run --tty --cpushare 512 /bin/sh
+sudo rocker run --image busybox --cpushare 512 /bin/sh
+
+# Run in background
+sudo rocker run --image busybox /bin/sleep 1000
+```
+
+### Manage Containers
+
+```bash
+# List all containers
+sudo rocker ps
+
+# View container logs
+sudo rocker logs <CONTAINER_ID>
+
+# Stop a container
+sudo rocker stop <CONTAINER_ID>
+
+# Remove a stopped container
+sudo rocker rm <CONTAINER_ID>
 ```
 
 ## Usage
 
+### Image Management
+
+#### Import Image
+
+```bash
+rocker import <TAR_FILE> <IMAGE_NAME>[:TAG]
+
+# Import busybox with default tag (latest)
+sudo rocker import base-image/busybox.tar busybox
+
+# Import with specific tag
+sudo rocker import alpine.tar alpine:3.18
+
+# Output:
+# Imported busybox:latest (ID: b38350bb, Size: 441.1MB)
+```
+
+#### List Images
+
+```bash
+rocker images
+
+# Output format:
+# REPOSITORY  TAG     IMAGE ID  SIZE     CREATED
+# busybox     latest  b38350bb  441.1MB  2026-01-14 10:00:00
+# alpine      3.18    a1b2c3d4  156.2MB  2026-01-14 11:30:00
+```
+
 ### Run Command
 
 ```bash
-rocker run [OPTIONS] <COMMAND>
+rocker run [OPTIONS] --image <IMAGE> <COMMAND>
 
 Options:
+  --image <NAME>[:TAG]   Image to run (e.g., busybox, alpine:3.18)
   -t, --tty              Allocate pseudo-terminal
-  -m, --memory <LIMIT>    Memory limit (e.g., 100m, 1g)
-  --cpushare <SHARES>     CPU time weight (default: 1024)
-  --cpuset <CORES>        CPU cores (e.g., 0-1, 0-2)
+  -m, --memory <LIMIT>   Memory limit (e.g., 100m, 1g)
+  --cpushare <SHARES>    CPU time weight (default: 1024)
+  --cpuset <CORES>       CPU cores (e.g., 0-1, 0-2)
 
 Examples:
-  # Interactive shell
-  sudo rocker run --tty /bin/sh
+  # Interactive shell with image
+  sudo rocker run --image busybox /bin/sh
 
-  # With memory limit
-  sudo rocker run --tty -m 256m /bin/sh
+  # With specific tag
+  sudo rocker run --image alpine:3.18 /bin/sh
+
+  # With TTY and memory limit
+  sudo rocker run --tty --image busybox -m 256m /bin/sh
 
   # Background container
-  sudo rocker run /bin/sleep 1000
+  sudo rocker run --image busybox /bin/sleep 1000
 ```
 
 ### List Containers
@@ -240,10 +307,10 @@ rocker/
 ├── src/
 │   ├── rocker/          # CLI application
 │   ├── container/       # Container runtime core
+│   ├── image/           # Image management
 │   ├── cgroups/         # Resource management
 │   ├── network/         # Networking (to be implemented)
-│   ├── namespace/       # Namespace utilities (to be implemented)
-│   └── demo/            # Demo/test programs
+│   └── namespace/       # Namespace utilities (to be implemented)
 ├── doc/                 # Documentation
 ├── base-image/         # BusyBox rootfs
 └── Cargo.toml          # Workspace configuration
@@ -258,6 +325,14 @@ Implements the fundamental container operations:
 - Root filesystem setup using `pivot_root`
 - Mount operations for `/proc` and `/dev`
 - Container metadata persistence
+
+#### Image Management (`src/image/`)
+
+Manages container images:
+- Import tar files as images
+- Image metadata storage and retrieval
+- Root filesystem management
+- Image tagging and versioning
 
 #### Cgroups Management (`src/cgroups/`)
 
@@ -303,6 +378,14 @@ Container metadata is stored at:
 └── container.log     # Container output logs (non-TTY containers)
 ```
 
+Image data is stored at:
+
+```
+/var/lib/rocker/images/{image_name}/{tag}/
+├── image.json        # Image metadata (name, tag, size, created time)
+└── rootfs/           # Extracted root filesystem
+```
+
 ## Development
 
 ### Build Project
@@ -343,8 +426,9 @@ The project follows these conventions:
 
 ### Technical Documentation
 
+- [Image Management](doc/image-management.md) - Image import, storage, and usage
 - [Container Lifecycle](doc/container-lifecycle.md) - Detailed container lifecycle management
-- [Container Images](doc/container-images.md) - Root filesystem and image management
+- [Container Images](doc/container-images.md) - Root filesystem and image concepts
 - [Linux Namespaces](doc/linux-namespace.md) - Namespace isolation concepts
 - [Linux Cgroups](doc/linux-cgroups.md) - Resource management with cgroups
 - [Union Filesystem](doc/union-file-system.md) - Layered filesystem concepts
@@ -366,20 +450,13 @@ This project is based on concepts from:
 - [x] Container lifecycle commands (run, ps, logs, stop, rm, commit)
 - [x] Exec command for container interaction
 - [x] CLI with modern argument parser
+- [x] Image management (import, images)
 
 ### In Progress 🚧
 
 - [ ] Volume mounting (-v flag)
 - [ ] Cpuset subsystem implementation
 - [ ] Network module (bridge, IPAM, port mapping)
-
-### Planned 📋
-
-- [ ] Image management (pull, build, push)
-- [ ] Multi-container networking
-- [ ] Container restart functionality
-- [ ] Detached mode improvements
-- [ ] Enhanced logging options
 
 ## Troubleshooting
 

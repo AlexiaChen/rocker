@@ -2,10 +2,10 @@
 members = [
   "src/cgroups",
   "src/container",
+  "src/image",
   "src/network",
   "src/namespace",
   "src/rocker",
-  "src/demo",
 ]
 resolver = "2"
 

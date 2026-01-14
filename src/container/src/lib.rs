@@ -163,7 +163,7 @@ impl Container {
     }
 
     /// create parent process ( init command container process)
-    pub fn create_parent_process(tty: bool, cmd: &str) -> Result<Child> {
+    pub fn create_parent_process(tty: bool, cmd: &str, rootfs_path: &std::path::Path) -> Result<Child> {
         let args = ["init", cmd];
 
         let fd = pipe();
@@ -179,14 +179,15 @@ impl Container {
             stderr_cfg = Stdio::inherit();
         }
 
-        let pwd = std::env::current_dir();
-        if pwd.is_err() {
-            error!("Could not get current directory in the container");
+        // Validate rootfs_path exists
+        if !rootfs_path.exists() {
+            return Err(anyhow::anyhow!(
+                "Rootfs path does not exist: {:?}",
+                rootfs_path
+            ));
         }
 
-        let pwd = pwd.unwrap().join("busybox");
-
-        let old_root = pwd.join(".pivot_root");
+        let old_root = rootfs_path.join(".pivot_root");
         if !old_root.exists() {
             std::fs::create_dir_all(old_root.clone())
                 .expect("create old_root dir out of container");
@@ -204,7 +205,7 @@ impl Container {
 
         // Set current working directory in parent process before spawning child
         // This avoids permission issues with user namespace unshare
-        std::env::set_current_dir(&pwd)
+        std::env::set_current_dir(rootfs_path)
             .expect("Failed to set current directory");
 
         //   fork a new namespace-isolated process to call current rocker process self  from "/proc/self/exe"

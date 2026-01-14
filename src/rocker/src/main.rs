@@ -11,6 +11,7 @@ use cgroups::cgroup_manager::CgroupManager;
 use cgroups::subsystems::subsystem::ResourceConfig;
 use clap::{Parser, Subcommand};
 use container::{Container, ContainerInfo, ContainerStatus, ContainerStore};
+use image::{ImageInfo, ImageStore};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -31,10 +32,14 @@ enum Commands {
     /// Run a container
     ///
     /// Example:
-    /// sudo RUST_LOG=trace ./rocker run --tty /bin/sh
-    /// sudo RUST_LOG=trace ./rocker run --tty "ls -l"
-    /// sudo ./rocker run /bin/sleep 1000
+    /// sudo RUST_LOG=trace ./rocker run --image busybox /bin/sh
+    /// sudo RUST_LOG=trace ./rocker run --tty --image busybox:latest "ls -l"
+    /// sudo ./rocker run --image busybox /bin/sleep 1000
     Run {
+        /// Image to run (e.g., busybox, busybox:latest)
+        #[arg(long)]
+        image: Option<String>,
+
         /// Enable tty (allocate pseudo-terminal)
         #[arg(short = 't', long)]
         tty: bool,
@@ -115,6 +120,24 @@ enum Commands {
         #[arg(required = true, num_args = 1..)]
         command: Vec<String>,
     },
+
+    /// List all images
+    Images,
+
+    /// Import a tar file as an image
+    ///
+    /// Example:
+    /// sudo rocker import busybox.tar busybox
+    /// sudo rocker import alpine.tar alpine:3.18
+    Import {
+        /// Tar file to import
+        #[arg(required = true)]
+        tar_file: String,
+
+        /// Image name (optionally with tag, e.g., "busybox:latest")
+        #[arg(required = true)]
+        image: String,
+    },
 }
 
 fn main() {
@@ -133,6 +156,7 @@ fn main() {
 fn run_command(command: Commands) -> Result<()> {
     match command {
         Commands::Run {
+            image,
             tty,
             memory,
             cpushare,
@@ -146,7 +170,7 @@ fn run_command(command: Commands) -> Result<()> {
             };
             // Join command arguments with spaces
             let cmd_str = command.join(" ");
-            run(tty, &cmd_str, &res);
+            run(image.as_deref(), tty, &cmd_str, &res);
             Ok(())
         }
         Commands::Init { command } => init(&command),
@@ -165,18 +189,54 @@ fn run_command(command: Commands) -> Result<()> {
             let cmd_str = command.join(" ");
             exec_container(&container_name, &cmd_str)
         }
+        Commands::Images => list_images(),
+        Commands::Import { tar_file, image } => {
+            import_image(&tar_file, &image)
+        }
     }
 }
 
-fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
-    debug!("rocker run  tty:{}, cmd:{}", tty, cmd);
+fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
+    debug!("rocker run image:{:?}, tty:{}, cmd:{}", image, tty, cmd);
+
+    // Parse image name and tag (default to "latest" if not specified)
+    let (image_name, image_tag) = if let Some(img) = image {
+        if img.contains(':') {
+            let parts: Vec<&str> = img.splitn(2, ':').collect();
+            (parts[0], parts[1])
+        } else {
+            (img, "latest")
+        }
+    } else {
+        // Default to busybox for backward compatibility
+        ("busybox", "latest")
+    };
+
+    // Get rootfs path from image
+    let rootfs_path = if let Some(_) = image {
+        match ImageStore::rootfs_path(image_name, image_tag) {
+            Ok(path) => path,
+            Err(e) => {
+                error!("Failed to get image rootfs: {}", e);
+                error!("Please import the image first using: rocker import <tar-file> {}", image_name);
+                std::process::exit(-1);
+            }
+        }
+    } else {
+        // Use current busybox directory as fallback
+        std::env::current_dir()
+            .map(|p| p.join("busybox"))
+            .unwrap_or_else(|_| PathBuf::from("/home/mathxh/project/rocker/busybox"))
+    };
+
+    debug!("Using rootfs path: {:?}", rootfs_path);
 
     // Generate container ID (10-digit random string)
     let container_id = ContainerInfo::generate_id();
     let container_name = container_id.clone();
 
     // Create parent process
-    let parent = Container::create_parent_process(tty, cmd);
+    let parent = Container::create_parent_process(tty, cmd, &rootfs_path);
     if parent.is_err() {
         error!("create parent process failed");
         std::process::exit(-1);
@@ -196,7 +256,7 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
         volume: None,
         port_mapping: Vec::new(),
         network: None,
-        image_name: "busybox".to_string(),
+        image_name: format!("{}:{}", image_name, image_tag),
     };
 
     if let Err(e) = ContainerStore::save(&container_info) {
@@ -595,4 +655,64 @@ fn get_container_envs(pid: i32) -> Result<Vec<(String, String)>> {
         .collect();
 
     Ok(envs)
+}
+
+/// List all images.
+///
+/// Displays image information in a table format with columns:
+/// REPOSITORY, TAG, IMAGE ID, SIZE, CREATED
+fn list_images() -> Result<()> {
+    use tabwriter::TabWriter;
+
+    let images = ImageStore::list_all()?;
+
+    if images.is_empty() {
+        println!("No images found. Use 'rocker import <tar-file> <image-name>' to import an image.");
+        return Ok(());
+    }
+
+    let mut stdout = TabWriter::new(std::io::stdout());
+    writeln!(stdout, "REPOSITORY\tTAG\tIMAGE ID\tSIZE\tCREATED")?;
+
+    for image in images {
+        writeln!(
+            stdout,
+            "{}\t{}\t{}\t{}\t{}",
+            image.name,
+            image.tag,
+            &image.id[..8], // Show first 8 chars of ID
+            ImageStore::format_size(image.size),
+            image.created_time
+        )?;
+    }
+
+    stdout.flush()?;
+    Ok(())
+}
+
+/// Import a tar file as an image.
+///
+/// Parses the image name (optionally with tag) and imports the tar file.
+fn import_image(tar_file: &str, image: &str) -> Result<()> {
+    // Parse image name and tag (format: "name" or "name:tag")
+    let (name, tag) = if image.contains(':') {
+        let parts: Vec<&str> = image.splitn(2, ':').collect();
+        (parts[0], parts[1])
+    } else {
+        (image, "latest")
+    };
+
+    // Import the image
+    let image_info = ImageStore::import(tar_file, name, tag)
+        .with_context(|| format!("Failed to import image {} from {}", image, tar_file))?;
+
+    println!(
+        "Imported {}:{} (ID: {}, Size: {})",
+        image_info.name,
+        image_info.tag,
+        &image_info.id[..8],
+        ImageStore::format_size(image_info.size)
+    );
+
+    Ok(())
 }
