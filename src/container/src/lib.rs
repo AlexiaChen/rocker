@@ -1,3 +1,19 @@
+//! Container runtime core functionality.
+//!
+//! This module provides the core container runtime implementation including:
+//! - Process creation with namespace isolation
+//! - Root filesystem setup with pivot_root
+//! - Mount operations for /proc and /dev
+//! - Container metadata persistence
+
+// Module declarations
+pub mod info;
+pub mod store;
+
+// Re-export public types
+pub use info::{ContainerInfo, ContainerStatus};
+pub use store::ContainerStore;
+
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
@@ -8,10 +24,13 @@ use nix::unistd::{chdir, execve, pipe, pivot_root};
 use std::ffi::CString;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::PathBuf;
-use unshare::{Child, Command, Fd, GidMap, Namespace, Stdio, UidMap};
+use unshare::{Child, Command, Fd, Namespace, Stdio};
 use users::{get_current_gid, get_current_uid};
-use which::which;
 
+/// Container runtime implementation.
+///
+/// This struct provides methods for creating and managing containers
+/// with Linux namespace isolation.
 pub struct Container {}
 
 impl Container {
@@ -36,11 +55,28 @@ impl Container {
         let argv: Vec<CString> =
             cmd_vec.iter().map(|x| CString::new(*x).unwrap()).collect();
 
-        // search path for specific executable
-        let path = which(cmd_vec[0]).unwrap();
-        let path =
-            CString::new(path.into_os_string().into_string().unwrap().as_str())
-                .unwrap();
+        // After pivot_root, we need to find the executable in the new root
+        // Try to resolve the path: if absolute path exists, use it; otherwise search in PATH
+        let bin_path = if cmd_vec[0].starts_with('/') {
+            // Absolute path - use as-is
+            cmd_vec[0].to_string()
+        } else {
+            // Relative path - search in standard locations
+            let search_paths = ["/bin", "/usr/bin", "/sbin", "/usr/sbin"];
+            let mut found_path = None;
+            for path in &search_paths {
+                let full_path = std::path::Path::new(path).join(cmd_vec[0]);
+                if full_path.exists() {
+                    found_path = Some(full_path);
+                    break;
+                }
+            }
+            found_path
+                .map(|p| p.to_str().unwrap().to_string())
+                .unwrap_or_else(|| cmd_vec[0].to_string())
+        };
+
+        let path = CString::new(bin_path.as_str()).unwrap();
 
         let envs: Vec<CString> = std::env::vars()
             .map(|(k, v)| {
@@ -48,14 +84,11 @@ impl Container {
             })
             .collect();
         let res = execve(path.as_c_str(), &argv, &envs);
-        match res {
-            Err(error) => {
-                return Err(anyhow::anyhow!(
-                    "Could not start the program with error: {}",
-                    error
-                ));
-            }
-            _ => {}
+        if let Err(error) = res {
+            return Err(anyhow::anyhow!(
+                "Could not start the program with error: {}",
+                error
+            ));
         }
         Ok(())
     }
@@ -109,6 +142,12 @@ impl Container {
         );
 
         let _ = Self::pivot_root(&pwd);
+
+        // After pivot_root, create mount points before mounting
+        std::fs::create_dir_all("/proc")
+            .expect("create /proc directory");
+        std::fs::create_dir_all("/dev")
+            .expect("create /dev directory");
 
         // mount proc file system for checking resources from ps command
         let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
@@ -166,8 +205,18 @@ impl Container {
             current_gid
         );
 
+        // Set current working directory in parent process before spawning child
+        // This avoids permission issues with user namespace unshare
+        std::env::set_current_dir(&pwd)
+            .expect("Failed to set current directory");
+
         //   fork a new namespace-isolated process to call current rocker process self  from "/proc/self/exe"
         // rocker init <cmd>
+        //
+        // Note: User namespace is excluded because it requires careful capability handling.
+        // The child process needs CAP_SYS_ADMIN for mount operations, which gets lost
+        // during user namespace unshare. For a working container, User namespace can be
+        // added later with proper capability management.
         let handle = Command::new("/proc/self/exe")
             .args(&args)
             .stdin(stdin_cfg)
@@ -178,24 +227,10 @@ impl Container {
                 Namespace::Ipc,
                 Namespace::Pid,
                 Namespace::Mount,
-                Namespace::User,
                 Namespace::Net,
             ])
-            .set_id_maps(
-                vec![UidMap {
-                    inside_uid: 0,
-                    outside_uid: current_uid,
-                    count: 1,
-                }],
-                vec![GidMap {
-                    inside_gid: 0,
-                    outside_gid: current_gid,
-                    count: 1,
-                }],
-            )
             .file_descriptor(read_pipe_fd, Fd::ReadPipe)
             .file_descriptor(write_pipe_fd, Fd::WritePipe)
-            .current_dir(pwd)
             .spawn()
             .unwrap();
 

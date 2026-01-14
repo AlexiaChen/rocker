@@ -62,6 +62,12 @@ impl Subsystem for CpusetSubsystem {
     }
 }
 
+impl Default for CpusetSubsystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CpusetSubsystem {
     pub fn new() -> Self {
         CpusetSubsystem {}

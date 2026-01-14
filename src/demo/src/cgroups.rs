@@ -32,7 +32,7 @@ const UPPER_MEM_LIMIT: i32 = 300 * 1024 * 1024;
 const LOWER_MEM_LIMIT: i32 = 100 * 1024 * 1024;
 
 fn main() {
-    let arg0 = env::args().nth(0).unwrap();
+    let arg0 = env::args().next().unwrap();
     // chekc if it self in container
     if arg0 == CURRENT_PROC {
         // wait for cgroup build and add_task finished, then go run stress

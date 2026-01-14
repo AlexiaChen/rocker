@@ -2,7 +2,8 @@ use crate::subsystems::cpu_set_subsystem::CpusetSubsystem;
 use crate::subsystems::cpu_subsystem::CpuSubsystem;
 use crate::subsystems::memory_subsystem::MemorySubsystem;
 use anyhow::Result;
-use std::sync::Once;
+use std::sync::OnceLock;
+
 /// Structs for users to pass resource limit configurations, including memory limits,
 /// CPU time weights, number of CPU cores, etc.
 #[derive(Default, Debug)]
@@ -17,7 +18,9 @@ pub struct ResourceConfig {
 
 /// Subsystem interface, where the cgroup is abstracted as path,
 /// because the path of the hierarchy of the cgroup is the virtual path in the virtual file system
-pub trait Subsystem {
+///
+/// This trait requires Send + Sync for thread-safe static storage with OnceLock.
+pub trait Subsystem: Send + Sync {
     /// subsystem name
     fn name(&self) -> &str;
     /// Set resource limits for the cgroup.
@@ -28,18 +31,17 @@ pub trait Subsystem {
     fn remove(&self, cgroup_path: &str) -> Result<()>;
 }
 
-static START: Once = Once::new();
-
+/// Get the initialized subsystems.
+///
+/// Uses OnceLock to ensure thread-safe one-time initialization.
 pub fn get_subsystems_initialized() -> &'static Vec<Box<dyn Subsystem>> {
-    unsafe {
-        static mut SUBSYSTEM_INTERAL: Vec<Box<dyn Subsystem>> = Vec::new();
+    static SUBSYSTEMS: OnceLock<Vec<Box<dyn Subsystem>>> = OnceLock::new();
 
-        START.call_once(|| {
-            SUBSYSTEM_INTERAL.push(Box::new(CpuSubsystem::new()));
-            SUBSYSTEM_INTERAL.push(Box::new(CpusetSubsystem::new()));
-            SUBSYSTEM_INTERAL.push(Box::new(MemorySubsystem::new()));
-        });
-
-        SUBSYSTEM_INTERAL.as_ref()
-    }
+    SUBSYSTEMS.get_or_init(|| {
+        vec![
+            Box::new(CpuSubsystem::new()) as Box<dyn Subsystem>,
+            Box::new(CpusetSubsystem::new()) as Box<dyn Subsystem>,
+            Box::new(MemorySubsystem::new()) as Box<dyn Subsystem>,
+        ]
+    })
 }

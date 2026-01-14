@@ -4,7 +4,19 @@ use std::fs::{remove_dir, File};
 use std::io::prelude::*;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;
+
 pub struct MemorySubsystem {}
+
+/// Detect if system is using cgroup v2
+fn is_cgroup_v2() -> bool {
+    if let Ok(mut mount_info_file) = File::open("/proc/self/mountinfo") {
+        let mut buf: String = String::new();
+        if mount_info_file.read_to_string(&mut buf).is_ok() {
+            return buf.contains("cgroup2");
+        }
+    }
+    false
+}
 
 impl Subsystem for MemorySubsystem {
     fn name(&self) -> &str {
@@ -17,8 +29,13 @@ impl Subsystem for MemorySubsystem {
             Ok(path) => {
                 if res.memory_limit.as_ref().is_some() {
                     let memory_limit = res.memory_limit.as_ref().unwrap();
-                    let memory_limit_path =
-                        Path::new(&path).join("memory.limit_in_bytes");
+                    // cgroup v2 uses memory.max, v1 uses memory.limit_in_bytes
+                    let limit_file = if is_cgroup_v2() {
+                        "memory.max"
+                    } else {
+                        "memory.limit_in_bytes"
+                    };
+                    let memory_limit_path = Path::new(&path).join(limit_file);
                     let mut file = File::create(memory_limit_path)?;
                     // 0644
                     // * (owning) User: read & write
@@ -39,7 +56,13 @@ impl Subsystem for MemorySubsystem {
     fn apply(&self, cgroup_path: &str, pid: i32) -> Result<()> {
         match get_cgroup_path(self.name(), cgroup_path, false) {
             Ok(path) => {
-                let pid_path = Path::new(&path).join("tasks");
+                // cgroup v2 uses cgroup.procs, v1 uses tasks
+                let tasks_file = if is_cgroup_v2() {
+                    "cgroup.procs"
+                } else {
+                    "tasks"
+                };
+                let pid_path = Path::new(&path).join(tasks_file);
                 let mut file = File::create(pid_path)?;
                 file.metadata().unwrap().permissions().set_mode(0o644);
                 file.write_all(format!("{}", pid).as_bytes()).map_err(|e| {
@@ -58,6 +81,12 @@ impl Subsystem for MemorySubsystem {
                 .map_err(|e| anyhow::anyhow!("remove cgroup failed {}", e)),
             Err(e) => Err(e),
         }
+    }
+}
+
+impl Default for MemorySubsystem {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

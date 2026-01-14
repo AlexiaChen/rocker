@@ -4,9 +4,41 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::{fs::create_dir_all, fs::File, io::Read};
 
+/// Detect if system is using cgroup v2
+fn is_cgroup_v2() -> bool {
+    if let Ok(mut mount_info_file) = File::open("/proc/self/mountinfo") {
+        let mut buf: String = String::new();
+        if mount_info_file.read_to_string(&mut buf).is_ok() {
+            return buf.contains("cgroup2");
+        }
+    }
+    false
+}
+
 /// Find the directory where the root node of the hierarchy cgroup is mounted on a subsystem via /proc/self/mountinfo
 pub fn find_cgroup_mount_point(subsystem: &str) -> Result<String> {
-    // cat /proc/self/mountinfo to check returned text format, and you will understand this function implementation
+    // For cgroup v2, use unified hierarchy
+    if is_cgroup_v2() {
+        // In cgroup v2, all controllers are under /sys/fs/cgroup
+        // Check if the subsystem controller is available
+        let controllers_path = "/sys/fs/cgroup/cgroup.controllers";
+        if let Ok(controllers) = std::fs::read_to_string(controllers_path) {
+            let controller_name = match subsystem {
+                "memory" => "memory",
+                "cpu" => "cpu",
+                "cpuset" => "cpuset",
+                _ => subsystem,
+            };
+            if controllers.contains(controller_name) {
+                return Ok("/sys/fs/cgroup".to_string());
+            }
+        }
+        // If controller not available, still return the base path
+        // The controller might need to be enabled via subtree_control
+        return Ok("/sys/fs/cgroup".to_string());
+    }
+
+    // cgroup v1: look for separate subsystem mounts
     let mut mount_info_file = File::open("/proc/self/mountinfo")
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     let mut buf: String = String::new();
@@ -66,14 +98,14 @@ pub fn get_cgroup_path(
                     .unwrap()
                     .permissions()
                     .set_mode(0o755);
-                return Ok(final_cgroup_path
+                Ok(final_cgroup_path
                     .as_path()
                     .to_str()
                     .unwrap()
-                    .to_string());
+                    .to_string())
             }
             Err(e) => {
-                return Err(anyhow::anyhow!("{}", e));
+                Err(anyhow::anyhow!("{}", e))
             }
         }
     } else {

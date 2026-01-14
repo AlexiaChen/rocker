@@ -2,17 +2,19 @@
 authors = ["MathxH Chen <brainfvck@foxmail.com>"]
 name = "rocker"
 version = "0.1.0"
-edition = "2018"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-app = "0.6.5"
-unshare = "0.7.0"
-cgroups-rs = "0.2.6"
 log = "0.4.14"
 pretty_env_logger = "0.4"
-container = {path = "../container/"}
-cgroups = {path = "../cgroups/"}
 anyhow = "1.0"
 thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tabwriter = "1.2"
+clap = { version = "4.5.54", features = ["derive"] }
+nix = "0.23"
+cgroups = {path = "../cgroups/"}
+container = {path = "../container/"}
