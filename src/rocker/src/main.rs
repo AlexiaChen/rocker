@@ -12,6 +12,7 @@ use cgroups::subsystems::subsystem::ResourceConfig;
 use clap::{Parser, Subcommand};
 use container::{Container, ContainerInfo, ContainerStatus, ContainerStore};
 use std::io::Write;
+use std::path::PathBuf;
 
 /// Rocker - A simple container runtime implemented in Rust
 #[derive(Parser, Debug)]
@@ -477,13 +478,20 @@ fn commit_container(container_name: &str, image_name: &str) -> Result<()> {
         format!("Failed to load container {}", container_name)
     })?;
 
-    // Workspace paths (will be properly set up when workspace module is implemented)
-    let mnt_url = format!("/root/mnt/{}/", container_name);
-    let image_tar = format!("/root/{}.tar", image_name);
+    // Current implementation uses busybox directory as the container rootfs
+    // TODO: Update when workspace module is implemented with proper mount points
+    let mnt_url = std::env::current_dir()
+        .map(|p| p.join("busybox"))
+        .unwrap_or_else(|_| PathBuf::from("/home/mathxh/project/rocker/busybox"));
+
+    // Save image tar to current working directory
+    let image_tar = std::env::current_dir()
+        .map(|p| p.join(format!("{}.tar", image_name)))
+        .unwrap_or_else(|_| PathBuf::from(format!("/root/{}.tar", image_name)));
 
     // Create tar archive of container filesystem
     let output = Command::new("tar")
-        .args(["-czf", &image_tar, "-C", &mnt_url, "."])
+        .args(["-czf", image_tar.to_str().unwrap(), "-C", mnt_url.to_str().unwrap(), "."])
         .output()
         .context("Failed to execute tar command")?;
 
