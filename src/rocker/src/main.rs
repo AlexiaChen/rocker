@@ -32,6 +32,7 @@ enum Commands {
     /// Example:
     /// sudo RUST_LOG=trace ./rocker run --tty /bin/sh
     /// sudo RUST_LOG=trace ./rocker run --tty "ls -l"
+    /// sudo ./rocker run /bin/sleep 1000
     Run {
         /// Enable tty (allocate pseudo-terminal)
         #[arg(short = 't', long)]
@@ -49,9 +50,9 @@ enum Commands {
         #[arg(long)]
         cpuset: Option<String>,
 
-        /// Command to run in the container
-        #[arg(required = true)]
-        command: String,
+        /// Command to run in the container (with arguments)
+        #[arg(required = true, num_args = 1..)]
+        command: Vec<String>,
     },
 
     /// Initialize container (internal use only)
@@ -138,7 +139,9 @@ fn run_command(command: Commands) -> Result<()> {
                 cpu_set: Some(cpushare.unwrap_or(String::from("1-2"))),
                 cpu_shares: Some(cpuset.unwrap_or(String::from("1024"))),
             };
-            run(tty, &command, &res);
+            // Join command arguments with spaces
+            let cmd_str = command.join(" ");
+            run(tty, &cmd_str, &res);
             Ok(())
         }
         Commands::Init { command } => init(&command),
