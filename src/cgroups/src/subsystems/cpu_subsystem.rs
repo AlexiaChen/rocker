@@ -1,6 +1,6 @@
 use crate::subsystems::{subsystem::*, util::get_cgroup_path};
 use anyhow::Result;
-use std::fs::{remove_dir, File};
+use std::fs::{File, remove_dir};
 use std::io::prelude::*;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;

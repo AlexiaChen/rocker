@@ -7,9 +7,9 @@ extern crate pretty_env_logger;
 extern crate log;
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
 use cgroups::cgroup_manager::CgroupManager;
 use cgroups::subsystems::subsystem::ResourceConfig;
+use clap::{Parser, Subcommand};
 use container::{Container, ContainerInfo, ContainerStatus, ContainerStore};
 use std::io::Write;
 
@@ -214,9 +214,9 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
         let mut stdout_opt = parent.stdout.take();
         let mut stderr_opt = parent.stderr.take();
 
-        use std::io::{Read, Write};
         use std::fs::File;
-        use std::thread::{spawn, JoinHandle};
+        use std::io::{Read, Write};
+        use std::thread::{JoinHandle, spawn};
 
         let mut handles: Vec<JoinHandle<()>> = Vec::new();
 
@@ -239,7 +239,11 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
                     handles.push(handle);
                 }
                 Err(e) => {
-                    warn!("Failed to create log file {}: {}", log_path.display(), e);
+                    warn!(
+                        "Failed to create log file {}: {}",
+                        log_path.display(),
+                        e
+                    );
                 }
             }
         }
@@ -288,7 +292,9 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     if let Ok(pwd) = pwd {
         let old_root = pwd.join("busybox").join(".pivot_root");
         if old_root.exists() {
-            if let Err(e) = std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap()) {
+            if let Err(e) =
+                std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap())
+            {
                 warn!("Failed to remove .pivot_root directory: {}", e);
             }
         }
@@ -303,13 +309,24 @@ fn run(tty: bool, cmd: &str, res: &ResourceConfig) {
     if tty {
         match ContainerStore::delete(&container_name) {
             Ok(_) => trace!("Container {} metadata deleted", container_name),
-            Err(e) => warn!("Failed to delete container {} metadata: {}", container_name, e),
+            Err(e) => warn!(
+                "Failed to delete container {} metadata: {}",
+                container_name, e
+            ),
         }
     } else {
         // Update status to Exited for non-TTY containers
-        match ContainerStore::update_status(&container_name, ContainerStatus::Exited) {
-            Ok(_) => trace!("Container {} status updated to Exited", container_name),
-            Err(e) => warn!("Failed to update container {} status: {}", container_name, e),
+        match ContainerStore::update_status(
+            &container_name,
+            ContainerStatus::Exited,
+        ) {
+            Ok(_) => {
+                trace!("Container {} status updated to Exited", container_name)
+            }
+            Err(e) => warn!(
+                "Failed to update container {} status: {}",
+                container_name, e
+            ),
         }
     }
 
@@ -366,15 +383,20 @@ fn log_container(container_name: &str) -> Result<()> {
     let log_path = ContainerStore::log_path(container_name);
 
     if !log_path.exists() {
-        return Err(anyhow::anyhow!("Container {} logs not found", container_name));
+        return Err(anyhow::anyhow!(
+            "Container {} logs not found",
+            container_name
+        ));
     }
 
-    let mut file = fs::File::open(&log_path)
-        .with_context(|| format!("Failed to open log file {}", log_path.display()))?;
+    let mut file = fs::File::open(&log_path).with_context(|| {
+        format!("Failed to open log file {}", log_path.display())
+    })?;
 
     let mut contents = Vec::new();
-    file.read_to_end(&mut contents)
-        .with_context(|| format!("Failed to read log file {}", log_path.display()))?;
+    file.read_to_end(&mut contents).with_context(|| {
+        format!("Failed to read log file {}", log_path.display())
+    })?;
 
     std::io::stdout()
         .write_all(&contents)
@@ -390,28 +412,30 @@ fn stop_container(container_name: &str) -> Result<()> {
     use nix::sys::signal::{self, Signal};
     use nix::unistd::Pid;
 
-    let mut info = ContainerStore::load(container_name)
-        .with_context(|| format!("Failed to load container {}", container_name))?;
+    let mut info = ContainerStore::load(container_name).with_context(|| {
+        format!("Failed to load container {}", container_name)
+    })?;
 
     if info.status == ContainerStatus::Stopped {
         println!("Container {} is already stopped", container_name);
         return Ok(());
     }
 
-    let pid: i32 = info
-        .pid
-        .parse()
-        .with_context(|| format!("Failed to parse container PID: {}", info.pid))?;
+    let pid: i32 = info.pid.parse().with_context(|| {
+        format!("Failed to parse container PID: {}", info.pid)
+    })?;
 
     // Send SIGTERM to container process
-    signal::kill(Pid::from_raw(pid), Signal::SIGTERM)
-        .with_context(|| format!("Failed to send SIGTERM to container PID {}", pid))?;
+    signal::kill(Pid::from_raw(pid), Signal::SIGTERM).with_context(|| {
+        format!("Failed to send SIGTERM to container PID {}", pid)
+    })?;
 
     // Update container status
     info.status = ContainerStatus::Stopped;
     info.pid = String::new(); // Clear PID
-    ContainerStore::save(&info)
-        .with_context(|| format!("Failed to update container status for {}", container_name))?;
+    ContainerStore::save(&info).with_context(|| {
+        format!("Failed to update container status for {}", container_name)
+    })?;
 
     println!("Container {} stopped", container_name);
     Ok(())
@@ -421,8 +445,9 @@ fn stop_container(container_name: &str) -> Result<()> {
 ///
 /// Deletes the container metadata directory. Cannot remove running containers.
 fn remove_container(container_name: &str) -> Result<()> {
-    let info = ContainerStore::load(container_name)
-        .with_context(|| format!("Failed to load container {}", container_name))?;
+    let info = ContainerStore::load(container_name).with_context(|| {
+        format!("Failed to load container {}", container_name)
+    })?;
 
     if info.status == ContainerStatus::Running {
         return Err(anyhow::anyhow!(
@@ -432,8 +457,9 @@ fn remove_container(container_name: &str) -> Result<()> {
     }
 
     // Delete container metadata
-    ContainerStore::delete(container_name)
-        .with_context(|| format!("Failed to delete container {}", container_name))?;
+    ContainerStore::delete(container_name).with_context(|| {
+        format!("Failed to delete container {}", container_name)
+    })?;
 
     // TODO: Delete workspace (mount points, write layers) when workspace module is implemented
 
@@ -447,8 +473,9 @@ fn remove_container(container_name: &str) -> Result<()> {
 fn commit_container(container_name: &str, image_name: &str) -> Result<()> {
     use std::process::Command;
 
-    let _info = ContainerStore::load(container_name)
-        .with_context(|| format!("Failed to load container {}", container_name))?;
+    let _info = ContainerStore::load(container_name).with_context(|| {
+        format!("Failed to load container {}", container_name)
+    })?;
 
     // Workspace paths (will be properly set up when workspace module is implemented)
     let mnt_url = format!("/root/mnt/{}/", container_name);
@@ -480,17 +507,17 @@ fn commit_container(container_name: &str, image_name: &str) -> Result<()> {
 fn exec_container(container_name: &str, command: &str) -> Result<()> {
     use nix::sched::CloneFlags;
     use nix::sched::setns;
-    
+
     use std::fs::File;
     use std::os::unix::io::AsRawFd;
 
-    let info = ContainerStore::load(container_name)
-        .with_context(|| format!("Failed to load container {}", container_name))?;
+    let info = ContainerStore::load(container_name).with_context(|| {
+        format!("Failed to load container {}", container_name)
+    })?;
 
-    let pid: i32 = info
-        .pid
-        .parse()
-        .with_context(|| format!("Failed to parse container PID: {}", info.pid))?;
+    let pid: i32 = info.pid.parse().with_context(|| {
+        format!("Failed to parse container PID: {}", info.pid)
+    })?;
 
     // Parse command into arguments
     let args: Vec<&str> = command.split_whitespace().collect();
@@ -516,8 +543,9 @@ fn exec_container(container_name: &str, command: &str) -> Result<()> {
             .with_context(|| format!("Failed to open namespace {}", ns_name))?;
 
         unsafe {
-            setns(ns_file.as_raw_fd(), *clone_flag)
-                .with_context(|| format!("Failed to enter {} namespace", ns_name))?;
+            setns(ns_file.as_raw_fd(), *clone_flag).with_context(|| {
+                format!("Failed to enter {} namespace", ns_name)
+            })?;
         }
     }
 
@@ -539,12 +567,14 @@ fn get_container_envs(pid: i32) -> Result<Vec<(String, String)>> {
     use std::io::Read;
 
     let environ_path = format!("/proc/{}/environ", pid);
-    let mut file = fs::File::open(&environ_path)
-        .with_context(|| format!("Failed to open container environ {}", environ_path))?;
+    let mut file = fs::File::open(&environ_path).with_context(|| {
+        format!("Failed to open container environ {}", environ_path)
+    })?;
 
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)
-        .with_context(|| format!("Failed to read container environ {}", environ_path))?;
+    file.read_to_end(&mut buffer).with_context(|| {
+        format!("Failed to read container environ {}", environ_path)
+    })?;
 
     let envs: Vec<(String, String)> = buffer
         .split(|&b| b == 0)

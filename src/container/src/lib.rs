@@ -144,10 +144,8 @@ impl Container {
         let _ = Self::pivot_root(&pwd);
 
         // After pivot_root, create mount points before mounting
-        std::fs::create_dir_all("/proc")
-            .expect("create /proc directory");
-        std::fs::create_dir_all("/dev")
-            .expect("create /dev directory");
+        std::fs::create_dir_all("/proc").expect("create /proc directory");
+        std::fs::create_dir_all("/dev").expect("create /dev directory");
 
         // mount proc file system for checking resources from ps command
         let flags = MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV;
@@ -201,8 +199,7 @@ impl Container {
         let current_gid = get_current_gid();
         trace!(
             "current uid is {}, gid is {} in the hosted system",
-            current_uid,
-            current_gid
+            current_uid, current_gid
         );
 
         // Set current working directory in parent process before spawning child
@@ -232,7 +229,9 @@ impl Container {
             .file_descriptor(read_pipe_fd, Fd::ReadPipe)
             .file_descriptor(write_pipe_fd, Fd::WritePipe)
             .spawn()
-            .map_err(|e| anyhow::anyhow!("Failed to spawn container process: {}", e))?;
+            .map_err(|e| {
+                anyhow::anyhow!("Failed to spawn container process: {}", e)
+            })?;
 
         Ok(handle)
     }

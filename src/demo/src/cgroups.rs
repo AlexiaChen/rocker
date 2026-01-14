@@ -56,7 +56,9 @@ fn main() {
     }
 
     if env::args().len() != 2 {
-        println!("usage: ./cg upper (upper memory limit) or ./cg lower (lower memory limit)");
+        println!(
+            "usage: ./cg upper (upper memory limit) or ./cg lower (lower memory limit)"
+        );
         return;
     }
 

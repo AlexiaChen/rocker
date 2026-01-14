@@ -98,15 +98,17 @@ impl ContainerStore {
         let dir_path = Self::container_dir(&info.name);
 
         // Create directory if it doesn't exist (matching MyDocker's 0622 permissions)
-        fs::create_dir_all(&dir_path)
-            .with_context(|| format!("Failed to create directory {}", dir_path.display()))?;
+        fs::create_dir_all(&dir_path).with_context(|| {
+            format!("Failed to create directory {}", dir_path.display())
+        })?;
 
         let config_path = dir_path.join(CONFIG_NAME);
         let json = serde_json::to_string_pretty(info)
             .context("Failed to serialize container info")?;
 
-        fs::write(&config_path, json)
-            .with_context(|| format!("Failed to write config to {}", config_path.display()))?;
+        fs::write(&config_path, json).with_context(|| {
+            format!("Failed to write config to {}", config_path.display())
+        })?;
 
         Ok(())
     }
@@ -137,11 +139,15 @@ impl ContainerStore {
         let config_path = Self::config_path(container_name);
 
         if !config_path.exists() {
-            return Err(anyhow::anyhow!("Container {} not found", container_name));
+            return Err(anyhow::anyhow!(
+                "Container {} not found",
+                container_name
+            ));
         }
 
-        let json = fs::read_to_string(&config_path)
-            .with_context(|| format!("Failed to read config from {}", config_path.display()))?;
+        let json = fs::read_to_string(&config_path).with_context(|| {
+            format!("Failed to read config from {}", config_path.display())
+        })?;
 
         let info: ContainerInfo = serde_json::from_str(&json)
             .context("Failed to deserialize container info")?;
@@ -202,7 +208,10 @@ impl ContainerStore {
             match Self::load(container_name) {
                 Ok(info) => containers.push(info),
                 Err(e) => {
-                    eprintln!("Failed to load container {}: {}", container_name, e);
+                    eprintln!(
+                        "Failed to load container {}: {}",
+                        container_name, e
+                    );
                     continue;
                 }
             }
@@ -235,8 +244,9 @@ impl ContainerStore {
         let dir_path = Self::container_dir(container_name);
 
         if dir_path.exists() {
-            fs::remove_dir_all(&dir_path)
-                .with_context(|| format!("Failed to remove directory {}", dir_path.display()))?;
+            fs::remove_dir_all(&dir_path).with_context(|| {
+                format!("Failed to remove directory {}", dir_path.display())
+            })?;
         }
 
         Ok(())

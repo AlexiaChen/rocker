@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::io::{self, BufRead};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::{fs::create_dir_all, fs::File, io::Read};
+use std::{fs::File, fs::create_dir_all, io::Read};
 
 /// Detect if system is using cgroup v2
 fn is_cgroup_v2() -> bool {
@@ -98,15 +98,9 @@ pub fn get_cgroup_path(
                     .unwrap()
                     .permissions()
                     .set_mode(0o755);
-                Ok(final_cgroup_path
-                    .as_path()
-                    .to_str()
-                    .unwrap()
-                    .to_string())
+                Ok(final_cgroup_path.as_path().to_str().unwrap().to_string())
             }
-            Err(e) => {
-                Err(anyhow::anyhow!("{}", e))
-            }
+            Err(e) => Err(anyhow::anyhow!("{}", e)),
         }
     } else {
         Ok(final_cgroup_path.as_path().to_str().unwrap().to_string())
@@ -115,7 +109,7 @@ pub fn get_cgroup_path(
 
 #[cfg(test)]
 mod tests {
-    use super::{find_cgroup_mount_point, get_cgroup_path, Path};
+    use super::{Path, find_cgroup_mount_point, get_cgroup_path};
     use std::fs::remove_dir;
 
     #[test]

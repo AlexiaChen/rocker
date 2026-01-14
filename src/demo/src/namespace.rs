@@ -6,7 +6,9 @@ const NO_ROOT_PRV: u32 = 1;
 
 fn main() {
     if env::args().len() != 2 {
-        println!("usage: ./ns 0(root user in container) or ./ns 1(no root user in container)");
+        println!(
+            "usage: ./ns 0(root user in container) or ./ns 1(no root user in container)"
+        );
         return;
     }
 
