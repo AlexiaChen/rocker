@@ -23,8 +23,9 @@ pub fn find_cgroup_mount_point(subsystem: &str) -> Result<String> {
         // Check if the subsystem controller is available
         let controllers_path = "/sys/fs/cgroup/cgroup.controllers";
         if let Ok(controllers) = std::fs::read_to_string(controllers_path)
-            && controllers.contains(subsystem) {
-                return Ok("/sys/fs/cgroup".to_string());
+            && controllers.contains(subsystem)
+        {
+            return Ok("/sys/fs/cgroup".to_string());
         }
         // If controller not available, still return the base path
         // The controller might need to be enabled via subtree_control

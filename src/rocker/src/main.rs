@@ -314,7 +314,8 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
 
         // Capture stderr - append to same log file
         if let Some(mut stderr) = stderr_opt
-            && let Ok(mut log_file) = File::options().create(false).append(true).open(&log_path)
+            && let Ok(mut log_file) =
+                File::options().create(false).append(true).open(&log_path)
         {
             let handle = spawn(move || {
                 let mut buffer = [0; 4096];

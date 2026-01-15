@@ -84,10 +84,7 @@ impl Container {
             })
             .collect();
         execve(path.as_c_str(), &argv, &envs).map_err(|error| {
-            anyhow::anyhow!(
-                "Could not start the program with error: {}",
-                error
-            )
+            anyhow::anyhow!("Could not start the program with error: {}", error)
         })?;
         Ok(())
     }
