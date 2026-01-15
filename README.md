@@ -4,6 +4,7 @@
 
 **A Simple Container Runtime Implemented in Rust**
 
+[![CI](https://github.com/AlexiaChen/rocker/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexiaChen/rocker/actions/workflows/ci.yml)
 [![Rust Edition](https://img.shields.io/badge/edition-2024-orange.svg)]
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)]
 
