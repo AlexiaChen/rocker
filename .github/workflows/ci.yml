@@ -50,7 +50,7 @@ jobs:
         run: cargo build --verbose
 
       - name: Run tests
-        run: sudo -E cargo test --verbose -- --test-threads=1
+        run: cargo test --verbose -- --test-threads=1
 
   lint:
     name: Lint
