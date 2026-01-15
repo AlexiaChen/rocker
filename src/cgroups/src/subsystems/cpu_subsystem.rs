@@ -72,7 +72,9 @@ impl Subsystem for CpuSubsystem {
                 let mut file = OpenOptions::new()
                     .write(true)
                     .open(pid_path)
-                    .with_context(|| format!("Failed to open {}", tasks_file))?;
+                    .with_context(|| {
+                        format!("Failed to open {}", tasks_file)
+                    })?;
 
                 let pid_str = format!("{}", pid);
                 file.write_all(pid_str.as_bytes()).map_err(|e| {
@@ -143,7 +145,8 @@ mod tests {
                         .unwrap();
 
                 // Use appropriate file name based on cgroup version
-                let shares_file = if is_v2 { "cpu.weight" } else { "cpu.shares" };
+                let shares_file =
+                    if is_v2 { "cpu.weight" } else { "cpu.shares" };
                 let path = Path::new(&path).join(shares_file);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -183,9 +186,11 @@ mod tests {
                 );
 
                 // Read and verify PID is in the file
-                let mut file = File::open(&path).expect("Failed to open cgroup.procs");
+                let mut file =
+                    File::open(&path).expect("Failed to open cgroup.procs");
                 let mut contents = String::new();
-                file.read_to_string(&mut contents).expect("Failed to read cgroup.procs");
+                file.read_to_string(&mut contents)
+                    .expect("Failed to read cgroup.procs");
 
                 // For cgroup v2, the PID should be in the file
                 // For cgroup v1, the file contains only the PID
@@ -205,9 +210,7 @@ mod tests {
                 assert!(
                     found,
                     "Expected PID {} to be found in {}, but got: {}",
-                    pid_str,
-                    tasks_file,
-                    contents
+                    pid_str, tasks_file, contents
                 );
             }
             Err(e) => {

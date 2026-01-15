@@ -163,7 +163,11 @@ impl Container {
     }
 
     /// create parent process ( init command container process)
-    pub fn create_parent_process(tty: bool, cmd: &str, rootfs_path: &std::path::Path) -> Result<Child> {
+    pub fn create_parent_process(
+        tty: bool,
+        cmd: &str,
+        rootfs_path: &std::path::Path,
+    ) -> Result<Child> {
         let args = ["init", cmd];
 
         let fd = pipe();

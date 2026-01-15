@@ -70,7 +70,9 @@ impl Subsystem for MemorySubsystem {
                 let mut file = OpenOptions::new()
                     .write(true)
                     .open(pid_path)
-                    .with_context(|| format!("Failed to open {}", tasks_file))?;
+                    .with_context(|| {
+                        format!("Failed to open {}", tasks_file)
+                    })?;
 
                 let pid_str = format!("{}", pid);
                 file.write_all(pid_str.as_bytes()).map_err(|e| {
@@ -144,7 +146,11 @@ mod tests {
                 .unwrap();
 
                 // Use appropriate file name based on cgroup version
-                let limit_file = if is_v2 { "memory.max" } else { "memory.limit_in_bytes" };
+                let limit_file = if is_v2 {
+                    "memory.max"
+                } else {
+                    "memory.limit_in_bytes"
+                };
                 let path = Path::new(&path).join(limit_file);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -185,9 +191,11 @@ mod tests {
                 );
 
                 // Read and verify PID is in the file
-                let mut file = File::open(&path).expect("Failed to open cgroup.procs");
+                let mut file =
+                    File::open(&path).expect("Failed to open cgroup.procs");
                 let mut contents = String::new();
-                file.read_to_string(&mut contents).expect("Failed to read cgroup.procs");
+                file.read_to_string(&mut contents)
+                    .expect("Failed to read cgroup.procs");
 
                 // For cgroup v2, the PID should be in the file
                 // For cgroup v1, the file contains only the PID
@@ -206,8 +214,7 @@ mod tests {
                 assert!(
                     found,
                     "Expected PID {} to be found in cgroup.procs, but got: {}",
-                    pid_str,
-                    contents
+                    pid_str, contents
                 );
             }
             Err(e) => {

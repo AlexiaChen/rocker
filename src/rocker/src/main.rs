@@ -190,9 +190,7 @@ fn run_command(command: Commands) -> Result<()> {
             exec_container(&container_name, &cmd_str)
         }
         Commands::Images => list_images(),
-        Commands::Import { tar_file, image } => {
-            import_image(&tar_file, &image)
-        }
+        Commands::Import { tar_file, image } => import_image(&tar_file, &image),
     }
 }
 
@@ -218,7 +216,10 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
             Ok(path) => path,
             Err(e) => {
                 error!("Failed to get image rootfs: {}", e);
-                error!("Please import the image first using: rocker import <tar-file> {}", image_name);
+                error!(
+                    "Please import the image first using: rocker import <tar-file> {}",
+                    image_name
+                );
                 std::process::exit(-1);
             }
         }
@@ -226,7 +227,9 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
         // Use current busybox directory as fallback
         std::env::current_dir()
             .map(|p| p.join("busybox"))
-            .unwrap_or_else(|_| PathBuf::from("/home/mathxh/project/rocker/busybox"))
+            .unwrap_or_else(|_| {
+                PathBuf::from("/home/mathxh/project/rocker/busybox")
+            })
     };
 
     debug!("Using rootfs path: {:?}", rootfs_path);
@@ -542,7 +545,9 @@ fn commit_container(container_name: &str, image_name: &str) -> Result<()> {
     // TODO: Update when workspace module is implemented with proper mount points
     let mnt_url = std::env::current_dir()
         .map(|p| p.join("busybox"))
-        .unwrap_or_else(|_| PathBuf::from("/home/mathxh/project/rocker/busybox"));
+        .unwrap_or_else(|_| {
+            PathBuf::from("/home/mathxh/project/rocker/busybox")
+        });
 
     // Save image tar to current working directory
     let image_tar = std::env::current_dir()
@@ -551,7 +556,13 @@ fn commit_container(container_name: &str, image_name: &str) -> Result<()> {
 
     // Create tar archive of container filesystem
     let output = Command::new("tar")
-        .args(["-czf", image_tar.to_str().unwrap(), "-C", mnt_url.to_str().unwrap(), "."])
+        .args([
+            "-czf",
+            image_tar.to_str().unwrap(),
+            "-C",
+            mnt_url.to_str().unwrap(),
+            ".",
+        ])
         .output()
         .context("Failed to execute tar command")?;
 
@@ -667,7 +678,9 @@ fn list_images() -> Result<()> {
     let images = ImageStore::list_all()?;
 
     if images.is_empty() {
-        println!("No images found. Use 'rocker import <tar-file> <image-name>' to import an image.");
+        println!(
+            "No images found. Use 'rocker import <tar-file> <image-name>' to import an image."
+        );
         return Ok(());
     }
 
@@ -703,8 +716,10 @@ fn import_image(tar_file: &str, image: &str) -> Result<()> {
     };
 
     // Import the image
-    let image_info = ImageStore::import(tar_file, name, tag)
-        .with_context(|| format!("Failed to import image {} from {}", image, tar_file))?;
+    let image_info =
+        ImageStore::import(tar_file, name, tag).with_context(|| {
+            format!("Failed to import image {} from {}", image, tar_file)
+        })?;
 
     println!(
         "Imported {}:{} (ID: {}, Size: {})",

@@ -6,8 +6,8 @@
 //! - Retrieving image metadata
 //! - Getting image rootfs path
 
-use crate::info::ImageInfo;
 use crate::IMAGE_ROOT;
+use crate::info::ImageInfo;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -40,10 +40,7 @@ impl ImageStore {
         // Validate tar file exists
         let tar_path = Path::new(tar_file);
         if !tar_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Tar file not found: {}",
-                tar_file
-            ));
+            return Err(anyhow::anyhow!("Tar file not found: {}", tar_file));
         }
 
         // Get tar file size
@@ -52,24 +49,21 @@ impl ImageStore {
             .len();
 
         // Create image directory
-        let image_dir = PathBuf::from(IMAGE_ROOT)
-            .join(name)
-            .join(tag);
-        fs::create_dir_all(&image_dir)
-            .with_context(|| format!("Failed to create image directory {:?}", image_dir))?;
+        let image_dir = PathBuf::from(IMAGE_ROOT).join(name).join(tag);
+        fs::create_dir_all(&image_dir).with_context(|| {
+            format!("Failed to create image directory {:?}", image_dir)
+        })?;
 
         // Create rootfs directory
         let rootfs_dir = image_dir.join(Self::ROOTFS_DIR);
-        fs::create_dir_all(&rootfs_dir)
-            .with_context(|| format!("Failed to create rootfs directory {:?}", rootfs_dir))?;
+        fs::create_dir_all(&rootfs_dir).with_context(|| {
+            format!("Failed to create rootfs directory {:?}", rootfs_dir)
+        })?;
 
         // Extract tar file to rootfs
         info!("Extracting {} to {:?}", tar_file, rootfs_dir);
         let output = Command::new("tar")
-            .args([
-                "-xf", tar_file,
-                "-C", rootfs_dir.to_str().unwrap(),
-            ])
+            .args(["-xf", tar_file, "-C", rootfs_dir.to_str().unwrap()])
             .output()
             .context("Failed to execute tar command")?;
 
@@ -84,20 +78,21 @@ impl ImageStore {
         let rootfs_size = Self::calculate_dir_size(&rootfs_dir)?;
 
         // Create image metadata
-        let image_info = ImageInfo::new(
-            name.to_string(),
-            tag.to_string(),
-            rootfs_size,
-        );
+        let image_info =
+            ImageInfo::new(name.to_string(), tag.to_string(), rootfs_size);
 
         // Save metadata
         let metadata_path = image_dir.join(Self::IMAGE_METADATA);
         let metadata_json = serde_json::to_string_pretty(&image_info)
             .context("Failed to serialize image metadata")?;
-        fs::write(&metadata_path, metadata_json)
-            .with_context(|| format!("Failed to write metadata to {:?}", metadata_path))?;
+        fs::write(&metadata_path, metadata_json).with_context(|| {
+            format!("Failed to write metadata to {:?}", metadata_path)
+        })?;
 
-        info!("Image {}:{} imported successfully (ID: {})", name, tag, image_info.id);
+        info!(
+            "Image {}:{} imported successfully (ID: {})",
+            name, tag, image_info.id
+        );
         Ok(image_info)
     }
 
@@ -114,18 +109,18 @@ impl ImageStore {
         let mut images = Vec::new();
 
         // Iterate over image name directories
-        for name_entry in fs::read_dir(images_dir)
-            .with_context(|| format!("Failed to read images directory {:?}", images_dir))?
-        {
+        for name_entry in fs::read_dir(images_dir).with_context(|| {
+            format!("Failed to read images directory {:?}", images_dir)
+        })? {
             let name_dir = name_entry?.path();
             if !name_dir.is_dir() {
                 continue;
             }
 
             // Iterate over tag directories
-            for tag_entry in fs::read_dir(&name_dir)
-                .with_context(|| format!("Failed to read directory {:?}", name_dir))?
-            {
+            for tag_entry in fs::read_dir(&name_dir).with_context(|| {
+                format!("Failed to read directory {:?}", name_dir)
+            })? {
                 let tag_dir = tag_entry?.path();
                 if !tag_dir.is_dir() {
                     continue;
@@ -135,17 +130,27 @@ impl ImageStore {
                 let metadata_path = tag_dir.join(Self::IMAGE_METADATA);
                 if metadata_path.exists() {
                     let metadata_json = fs::read_to_string(&metadata_path)
-                        .with_context(|| format!("Failed to read metadata from {:?}", metadata_path))?;
-                    let image_info: ImageInfo = serde_json::from_str(&metadata_json)
-                        .with_context(|| format!("Failed to parse metadata from {:?}", metadata_path))?;
+                        .with_context(|| {
+                            format!(
+                                "Failed to read metadata from {:?}",
+                                metadata_path
+                            )
+                        })?;
+                    let image_info: ImageInfo = serde_json::from_str(
+                        &metadata_json,
+                    )
+                    .with_context(|| {
+                        format!(
+                            "Failed to parse metadata from {:?}",
+                            metadata_path
+                        )
+                    })?;
                     images.push(image_info);
                 }
             }
         }
 
-        images.sort_by(|a, b| {
-            a.created_time.cmp(&b.created_time).reverse()
-        });
+        images.sort_by(|a, b| a.created_time.cmp(&b.created_time).reverse());
 
         Ok(images)
     }
@@ -156,22 +161,21 @@ impl ImageStore {
     /// * `name` - Image name
     /// * `tag` - Image tag (default: "latest")
     pub fn load(name: &str, tag: &str) -> Result<ImageInfo> {
-        let image_dir = PathBuf::from(IMAGE_ROOT)
-            .join(name)
-            .join(tag);
+        let image_dir = PathBuf::from(IMAGE_ROOT).join(name).join(tag);
         let metadata_path = image_dir.join(Self::IMAGE_METADATA);
 
         if !metadata_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Image {}:{} not found",
-                name, tag
-            ));
+            return Err(anyhow::anyhow!("Image {}:{} not found", name, tag));
         }
 
-        let metadata_json = fs::read_to_string(&metadata_path)
-            .with_context(|| format!("Failed to read metadata from {:?}", metadata_path))?;
+        let metadata_json =
+            fs::read_to_string(&metadata_path).with_context(|| {
+                format!("Failed to read metadata from {:?}", metadata_path)
+            })?;
         let image_info: ImageInfo = serde_json::from_str(&metadata_json)
-            .with_context(|| format!("Failed to parse metadata from {:?}", metadata_path))?;
+            .with_context(|| {
+                format!("Failed to parse metadata from {:?}", metadata_path)
+            })?;
 
         Ok(image_info)
     }
@@ -190,7 +194,8 @@ impl ImageStore {
         if !rootfs_dir.exists() {
             return Err(anyhow::anyhow!(
                 "Image rootfs not found for {}:{}",
-                name, tag
+                name,
+                tag
             ));
         }
 
@@ -203,24 +208,21 @@ impl ImageStore {
     /// * `name` - Image name
     /// * `tag` - Image tag
     pub fn delete(name: &str, tag: &str) -> Result<()> {
-        let image_dir = PathBuf::from(IMAGE_ROOT)
-            .join(name)
-            .join(tag);
+        let image_dir = PathBuf::from(IMAGE_ROOT).join(name).join(tag);
 
         if !image_dir.exists() {
-            return Err(anyhow::anyhow!(
-                "Image {}:{} not found",
-                name, tag
-            ));
+            return Err(anyhow::anyhow!("Image {}:{} not found", name, tag));
         }
 
-        fs::remove_dir_all(&image_dir)
-            .with_context(|| format!("Failed to delete image directory {:?}", image_dir))?;
+        fs::remove_dir_all(&image_dir).with_context(|| {
+            format!("Failed to delete image directory {:?}", image_dir)
+        })?;
 
         // Try to remove name directory if it's empty
         let name_dir = PathBuf::from(IMAGE_ROOT).join(name);
         if name_dir.exists() {
-            let is_empty = name_dir.read_dir()
+            let is_empty = name_dir
+                .read_dir()
                 .map(|mut entries| entries.next().is_none())
                 .unwrap_or(false);
             if is_empty {
@@ -244,8 +246,11 @@ impl ImageStore {
             if path.is_dir() {
                 total += Self::calculate_dir_size(&path)?;
             } else {
-                total += entry.metadata()
-                    .with_context(|| format!("Failed to get metadata for {:?}", path))?
+                total += entry
+                    .metadata()
+                    .with_context(|| {
+                        format!("Failed to get metadata for {:?}", path)
+                    })?
                     .len();
             }
         }

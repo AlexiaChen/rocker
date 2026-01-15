@@ -76,7 +76,8 @@ mod tests {
 
     #[test]
     fn test_image_info() {
-        let info = ImageInfo::new("busybox".to_string(), "latest".to_string(), 1024);
+        let info =
+            ImageInfo::new("busybox".to_string(), "latest".to_string(), 1024);
 
         assert_eq!(info.name, "busybox");
         assert_eq!(info.tag, "latest");

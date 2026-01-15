@@ -109,8 +109,8 @@ pub fn get_cgroup_path(
 
 #[cfg(test)]
 mod tests {
-    use super::{Path, get_cgroup_path, find_cgroup_mount_point};
-    use std::fs::{remove_dir, File};
+    use super::{Path, find_cgroup_mount_point, get_cgroup_path};
+    use std::fs::{File, remove_dir};
     use std::io::Read;
 
     // Detect if system is using cgroup v2
@@ -131,7 +131,11 @@ mod tests {
         match find_cgroup_mount_point("memory") {
             Ok(path) => {
                 // cgroup v2 uses unified hierarchy
-                let expected = if is_v2 { "/sys/fs/cgroup" } else { "/sys/fs/cgroup/memory" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup"
+                } else {
+                    "/sys/fs/cgroup/memory"
+                };
                 assert_eq!(path, expected);
                 println!("memory subsystem mount point {}", path)
             }
@@ -140,7 +144,11 @@ mod tests {
 
         match find_cgroup_mount_point("cpu") {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup" } else { "/sys/fs/cgroup/cpu" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup"
+                } else {
+                    "/sys/fs/cgroup/cpu"
+                };
                 assert_eq!(path, expected);
                 println!("cpu subsystem mount point {}", path)
             }
@@ -149,7 +157,11 @@ mod tests {
 
         match find_cgroup_mount_point("cpuset") {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup" } else { "/sys/fs/cgroup/cpuset" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup"
+                } else {
+                    "/sys/fs/cgroup/cpuset"
+                };
                 assert_eq!(path, expected);
                 println!("cpuset subsystem mount point {}", path)
             }
@@ -164,7 +176,11 @@ mod tests {
         // Test with auto_create = true
         match get_cgroup_path("memory", "test", true) {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup/test" } else { "/sys/fs/cgroup/memory/test" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup/test"
+                } else {
+                    "/sys/fs/cgroup/memory/test"
+                };
                 assert_eq!(path, expected);
                 println!("memory subsystem cgroup path {}", path);
                 assert_eq!(
@@ -179,7 +195,11 @@ mod tests {
 
         match get_cgroup_path("cpu", "test", true) {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup/test" } else { "/sys/fs/cgroup/cpu/test" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup/test"
+                } else {
+                    "/sys/fs/cgroup/cpu/test"
+                };
                 assert_eq!(path, expected);
                 println!("cpu subsystem cgroup path {}", path);
                 assert_eq!(
@@ -194,7 +214,11 @@ mod tests {
 
         match get_cgroup_path("cpuset", "test", true) {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup/test" } else { "/sys/fs/cgroup/cpuset/test" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup/test"
+                } else {
+                    "/sys/fs/cgroup/cpuset/test"
+                };
                 assert_eq!(path, expected);
                 println!("cpuset subsystem cgroup path {}", path);
                 assert_eq!(
@@ -211,7 +235,11 @@ mod tests {
 
         match get_cgroup_path("memory", "test2", false) {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup/test2" } else { "/sys/fs/cgroup/memory/test2" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup/test2"
+                } else {
+                    "/sys/fs/cgroup/memory/test2"
+                };
                 assert_eq!(path, expected);
                 println!("memory subsystem cgroup path {}", path);
                 assert_eq!(
@@ -225,7 +253,11 @@ mod tests {
 
         match get_cgroup_path("cpu", "test2", false) {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup/test2" } else { "/sys/fs/cgroup/cpu/test2" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup/test2"
+                } else {
+                    "/sys/fs/cgroup/cpu/test2"
+                };
                 assert_eq!(path, expected);
                 println!("cpu subsystem cgroup path {}", path);
                 assert_eq!(
@@ -239,7 +271,11 @@ mod tests {
 
         match get_cgroup_path("cpuset", "test2", false) {
             Ok(path) => {
-                let expected = if is_v2 { "/sys/fs/cgroup/test2" } else { "/sys/fs/cgroup/cpuset/test2" };
+                let expected = if is_v2 {
+                    "/sys/fs/cgroup/test2"
+                } else {
+                    "/sys/fs/cgroup/cpuset/test2"
+                };
                 assert_eq!(path, expected);
                 println!("cpuset subsystem cgroup path {}", path);
                 assert_eq!(
