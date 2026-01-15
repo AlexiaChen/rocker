@@ -1,5 +1,5 @@
 use crate::subsystems::{subsystem::*, util::get_cgroup_path};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::fs::{File, remove_dir};
 use std::io::prelude::*;
 use std::os::unix::prelude::PermissionsExt;
@@ -63,11 +63,20 @@ impl Subsystem for MemorySubsystem {
                     "tasks"
                 };
                 let pid_path = Path::new(&path).join(tasks_file);
-                let mut file = File::create(pid_path)?;
-                file.metadata().unwrap().permissions().set_mode(0o644);
-                file.write_all(format!("{}", pid).as_bytes()).map_err(|e| {
+
+                // Use OpenOptions instead of File::create() to avoid O_TRUNC
+                // which can cause issues with cgroup.procs files
+                use std::fs::OpenOptions;
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .open(pid_path)
+                    .with_context(|| format!("Failed to open {}", tasks_file))?;
+
+                let pid_str = format!("{}", pid);
+                file.write_all(pid_str.as_bytes()).map_err(|e| {
                     anyhow::anyhow!("apply cgroup memory failed {}", e)
                 })?;
+                file.flush()?; // Ensure data is written
                 Ok(())
             }
             Err(e) => Err(e),
@@ -99,7 +108,20 @@ impl MemorySubsystem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::File;
+    use std::io::Read;
     use std::process;
+
+    // Detect if system is using cgroup v2 (same logic as in memory_subsystem)
+    fn is_cgroup_v2() -> bool {
+        if let Ok(mut mount_info_file) = File::open("/proc/self/mountinfo") {
+            let mut buf: String = String::new();
+            if mount_info_file.read_to_string(&mut buf).is_ok() {
+                return buf.contains("cgroup2");
+            }
+        }
+        false
+    }
 
     #[test]
     fn test_memory_subsystem() {
@@ -110,6 +132,8 @@ mod tests {
             ..Default::default()
         };
 
+        let is_v2 = is_cgroup_v2();
+
         match memory_subsystem.set(cgroup_path, &res) {
             Ok(_) => {
                 let path = get_cgroup_path(
@@ -119,11 +143,14 @@ mod tests {
                 )
                 .unwrap();
 
-                let path = Path::new(&path).join("memory.limit_in_bytes");
+                // Use appropriate file name based on cgroup version
+                let limit_file = if is_v2 { "memory.max" } else { "memory.limit_in_bytes" };
+                let path = Path::new(&path).join(limit_file);
                 assert_eq!(
                     Path::new(&path).exists(),
                     true,
-                    "memory subsystem cgroup path memory.limit_in_bytes should exist"
+                    "memory subsystem cgroup path {} should exist",
+                    limit_file
                 );
 
                 let mut file = File::open(path).unwrap();
@@ -146,25 +173,49 @@ mod tests {
                 )
                 .unwrap();
 
-                let path = Path::new(&path).join("tasks");
-                assert_eq!(
+                // Use appropriate file name based on cgroup version
+                let tasks_file = if is_v2 { "cgroup.procs" } else { "tasks" };
+                let path = Path::new(&path).join(tasks_file);
+
+                // Check if file exists and is not empty
+                assert!(
                     Path::new(&path).exists(),
-                    true,
-                    "memory subsystem cgroup path tasks should exist"
+                    "memory subsystem cgroup path {} should exist",
+                    tasks_file
                 );
 
-                let mut file = File::open(path).unwrap();
+                // Read and verify PID is in the file
+                let mut file = File::open(&path).expect("Failed to open cgroup.procs");
                 let mut contents = String::new();
-                file.read_to_string(&mut contents).unwrap();
-                let expected = format!("{}", process::id());
-                assert_eq!(contents.trim(), expected);
+                file.read_to_string(&mut contents).expect("Failed to read cgroup.procs");
+
+                // For cgroup v2, the PID should be in the file
+                // For cgroup v1, the file contains only the PID
+                let pid_str = format!("{}", process::id());
+
+                // Check if our PID is in the file (may contain multiple PIDs, one per line)
+                let found = contents.lines().any(|line| line.trim() == pid_str);
+
+                // Debug output
+                if !found {
+                    eprintln!("DEBUG: Looking for PID: {}", pid_str);
+                    eprintln!("DEBUG: File contents: {:?}", contents);
+                    eprintln!("DEBUG: File path: {:?}", path);
+                }
+
+                assert!(
+                    found,
+                    "Expected PID {} to be found in cgroup.procs, but got: {}",
+                    pid_str,
+                    contents
+                );
             }
             Err(e) => {
                 assert!(false, "apply cgroup memory failed {}", e);
             }
         }
 
-        // move the process into the cgroup root path  ( /sys/fs/cgroup/memory )
+        // move the process into the cgroup root path
         let _ = memory_subsystem.apply("", process::id() as i32);
         match memory_subsystem.remove(cgroup_path) {
             Ok(_) => {

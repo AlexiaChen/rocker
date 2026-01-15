@@ -109,43 +109,63 @@ pub fn get_cgroup_path(
 
 #[cfg(test)]
 mod tests {
-    use super::{Path, find_cgroup_mount_point, get_cgroup_path};
-    use std::fs::remove_dir;
+    use super::{Path, get_cgroup_path, find_cgroup_mount_point};
+    use std::fs::{remove_dir, File};
+    use std::io::Read;
+
+    // Detect if system is using cgroup v2
+    fn is_cgroup_v2() -> bool {
+        if let Ok(mut mount_info_file) = File::open("/proc/self/mountinfo") {
+            let mut buf: String = String::new();
+            if mount_info_file.read_to_string(&mut buf).is_ok() {
+                return buf.contains("cgroup2");
+            }
+        }
+        false
+    }
 
     #[test]
     fn test_find_cgroup_mount_point() {
+        let is_v2 = is_cgroup_v2();
+
         match find_cgroup_mount_point("memory") {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/memory");
-                // cargo test -- --nocapture
-                // can print the result
+                // cgroup v2 uses unified hierarchy
+                let expected = if is_v2 { "/sys/fs/cgroup" } else { "/sys/fs/cgroup/memory" };
+                assert_eq!(path, expected);
                 println!("memory subsystem mount point {}", path)
             }
-            Err(_) => assert!(false),
+            Err(_) => assert!(false, "find_cgroup_mount_point memory failed"),
         }
 
         match find_cgroup_mount_point("cpu") {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/cpu");
+                let expected = if is_v2 { "/sys/fs/cgroup" } else { "/sys/fs/cgroup/cpu" };
+                assert_eq!(path, expected);
                 println!("cpu subsystem mount point {}", path)
             }
-            Err(_) => assert!(false),
+            Err(_) => assert!(false, "find_cgroup_mount_point cpu failed"),
         }
 
         match find_cgroup_mount_point("cpuset") {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/cpuset");
+                let expected = if is_v2 { "/sys/fs/cgroup" } else { "/sys/fs/cgroup/cpuset" };
+                assert_eq!(path, expected);
                 println!("cpuset subsystem mount point {}", path)
             }
-            Err(_) => assert!(false),
+            Err(_) => assert!(false, "find_cgroup_mount_point cpuset failed"),
         }
     }
 
     #[test]
     fn test_get_crgoup_path() {
+        let is_v2 = is_cgroup_v2();
+
+        // Test with auto_create = true
         match get_cgroup_path("memory", "test", true) {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/memory/test");
+                let expected = if is_v2 { "/sys/fs/cgroup/test" } else { "/sys/fs/cgroup/memory/test" };
+                assert_eq!(path, expected);
                 println!("memory subsystem cgroup path {}", path);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -154,12 +174,13 @@ mod tests {
                 );
                 remove_dir(path).unwrap();
             }
-            Err(e) => println!("{}", e),
+            Err(e) => panic!("get_cgroup_path memory failed: {}", e),
         }
 
         match get_cgroup_path("cpu", "test", true) {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/cpu/test");
+                let expected = if is_v2 { "/sys/fs/cgroup/test" } else { "/sys/fs/cgroup/cpu/test" };
+                assert_eq!(path, expected);
                 println!("cpu subsystem cgroup path {}", path);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -168,12 +189,13 @@ mod tests {
                 );
                 remove_dir(path).unwrap();
             }
-            Err(e) => println!("{}", e),
+            Err(e) => panic!("get_cgroup_path cpu failed: {}", e),
         }
 
         match get_cgroup_path("cpuset", "test", true) {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
+                let expected = if is_v2 { "/sys/fs/cgroup/test" } else { "/sys/fs/cgroup/cpuset/test" };
+                assert_eq!(path, expected);
                 println!("cpuset subsystem cgroup path {}", path);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -182,14 +204,15 @@ mod tests {
                 );
                 remove_dir(path).unwrap();
             }
-            Err(e) => println!("{}", e),
+            Err(e) => panic!("get_cgroup_path cpuset failed: {}", e),
         }
 
         //////////////////////  auto_create false  //////////////////////////////////////
 
-        match get_cgroup_path("memory", "test", false) {
+        match get_cgroup_path("memory", "test2", false) {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/memory/test");
+                let expected = if is_v2 { "/sys/fs/cgroup/test2" } else { "/sys/fs/cgroup/memory/test2" };
+                assert_eq!(path, expected);
                 println!("memory subsystem cgroup path {}", path);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -200,9 +223,10 @@ mod tests {
             Err(e) => println!("{}", e),
         }
 
-        match get_cgroup_path("cpu", "test", false) {
+        match get_cgroup_path("cpu", "test2", false) {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/cpu/test");
+                let expected = if is_v2 { "/sys/fs/cgroup/test2" } else { "/sys/fs/cgroup/cpu/test2" };
+                assert_eq!(path, expected);
                 println!("cpu subsystem cgroup path {}", path);
                 assert_eq!(
                     Path::new(&path).exists(),
@@ -213,9 +237,10 @@ mod tests {
             Err(e) => println!("{}", e),
         }
 
-        match get_cgroup_path("cpuset", "test", false) {
+        match get_cgroup_path("cpuset", "test2", false) {
             Ok(path) => {
-                assert_eq!(path, "/sys/fs/cgroup/cpuset/test");
+                let expected = if is_v2 { "/sys/fs/cgroup/test2" } else { "/sys/fs/cgroup/cpuset/test2" };
+                assert_eq!(path, expected);
                 println!("cpuset subsystem cgroup path {}", path);
                 assert_eq!(
                     Path::new(&path).exists(),
