@@ -22,16 +22,9 @@ pub fn find_cgroup_mount_point(subsystem: &str) -> Result<String> {
         // In cgroup v2, all controllers are under /sys/fs/cgroup
         // Check if the subsystem controller is available
         let controllers_path = "/sys/fs/cgroup/cgroup.controllers";
-        if let Ok(controllers) = std::fs::read_to_string(controllers_path) {
-            let controller_name = match subsystem {
-                "memory" => "memory",
-                "cpu" => "cpu",
-                "cpuset" => "cpuset",
-                _ => subsystem,
-            };
-            if controllers.contains(controller_name) {
+        if let Ok(controllers) = std::fs::read_to_string(controllers_path)
+            && controllers.contains(subsystem) {
                 return Ok("/sys/fs/cgroup".to_string());
-            }
         }
         // If controller not available, still return the base path
         // The controller might need to be enabled via subtree_control
@@ -139,7 +132,7 @@ mod tests {
                 assert_eq!(path, expected);
                 println!("memory subsystem mount point {}", path)
             }
-            Err(_) => assert!(false, "find_cgroup_mount_point memory failed"),
+            Err(_) => panic!("find_cgroup_mount_point memory failed"),
         }
 
         match find_cgroup_mount_point("cpu") {
@@ -152,7 +145,7 @@ mod tests {
                 assert_eq!(path, expected);
                 println!("cpu subsystem mount point {}", path)
             }
-            Err(_) => assert!(false, "find_cgroup_mount_point cpu failed"),
+            Err(_) => panic!("find_cgroup_mount_point cpu failed"),
         }
 
         match find_cgroup_mount_point("cpuset") {
@@ -165,7 +158,7 @@ mod tests {
                 assert_eq!(path, expected);
                 println!("cpuset subsystem mount point {}", path)
             }
-            Err(_) => assert!(false, "find_cgroup_mount_point cpuset failed"),
+            Err(_) => panic!("find_cgroup_mount_point cpuset failed"),
         }
     }
 
@@ -183,9 +176,8 @@ mod tests {
                 };
                 assert_eq!(path, expected);
                 println!("memory subsystem cgroup path {}", path);
-                assert_eq!(
+                assert!(
                     Path::new(&path).exists(),
-                    true,
                     "memory subsystem cgroup path should exist"
                 );
                 remove_dir(path).unwrap();
@@ -202,9 +194,8 @@ mod tests {
                 };
                 assert_eq!(path, expected);
                 println!("cpu subsystem cgroup path {}", path);
-                assert_eq!(
+                assert!(
                     Path::new(&path).exists(),
-                    true,
                     "cpu subsystem cgroup path should exist"
                 );
                 remove_dir(path).unwrap();
@@ -221,9 +212,8 @@ mod tests {
                 };
                 assert_eq!(path, expected);
                 println!("cpuset subsystem cgroup path {}", path);
-                assert_eq!(
+                assert!(
                     Path::new(&path).exists(),
-                    true,
                     "cpuset subsystem cgroup path should exist"
                 );
                 remove_dir(path).unwrap();
@@ -242,9 +232,8 @@ mod tests {
                 };
                 assert_eq!(path, expected);
                 println!("memory subsystem cgroup path {}", path);
-                assert_eq!(
-                    Path::new(&path).exists(),
-                    false,
+                assert!(
+                    !Path::new(&path).exists(),
                     "memory subsystem cgroup path should not exist"
                 );
             }
@@ -260,9 +249,8 @@ mod tests {
                 };
                 assert_eq!(path, expected);
                 println!("cpu subsystem cgroup path {}", path);
-                assert_eq!(
-                    Path::new(&path).exists(),
-                    false,
+                assert!(
+                    !Path::new(&path).exists(),
                     "cpu subsystem cgroup path should not exist"
                 );
             }
@@ -278,9 +266,8 @@ mod tests {
                 };
                 assert_eq!(path, expected);
                 println!("cpuset subsystem cgroup path {}", path);
-                assert_eq!(
-                    Path::new(&path).exists(),
-                    false,
+                assert!(
+                    !Path::new(&path).exists(),
                     "cpuset subsystem cgroup path should not exist"
                 );
             }

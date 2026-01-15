@@ -129,7 +129,7 @@ impl ContainerStore {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use container::store::ContainerStore;
     ///
     /// let info = ContainerStore::load("my_container").unwrap();
@@ -271,7 +271,7 @@ impl ContainerStore {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use container::store::ContainerStore;
     /// use container::info::ContainerStatus;
     ///
@@ -338,7 +338,7 @@ impl ContainerStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::info::ContainerStatus;
+    use std::path::PathBuf;
 
     #[test]
     fn test_container_dir_path() {

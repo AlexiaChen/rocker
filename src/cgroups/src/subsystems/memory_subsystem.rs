@@ -152,9 +152,8 @@ mod tests {
                     "memory.limit_in_bytes"
                 };
                 let path = Path::new(&path).join(limit_file);
-                assert_eq!(
+                assert!(
                     Path::new(&path).exists(),
-                    true,
                     "memory subsystem cgroup path {} should exist",
                     limit_file
                 );
@@ -166,7 +165,7 @@ mod tests {
                 assert_eq!(contents.trim(), format!("{}", expected));
             }
             Err(e) => {
-                assert!(false, "set cgroup memory failed {}", e);
+                panic!("set cgroup memory failed {}", e);
             }
         }
 
@@ -218,7 +217,7 @@ mod tests {
                 );
             }
             Err(e) => {
-                assert!(false, "apply cgroup memory failed {}", e);
+                panic!("apply cgroup memory failed {}", e);
             }
         }
 
@@ -232,14 +231,13 @@ mod tests {
                     false,
                 )
                 .unwrap();
-                assert_eq!(
-                    Path::new(&path).exists(),
-                    false,
+                assert!(
+                    !Path::new(&path).exists(),
                     "memory subsystem cgroup path should not exist"
                 );
             }
             Err(e) => {
-                assert!(false, "remove cgroup memory failed {}", e);
+                panic!("remove cgroup memory failed {}", e);
             }
         }
     }

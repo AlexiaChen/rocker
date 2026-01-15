@@ -11,7 +11,7 @@ use cgroups::cgroup_manager::CgroupManager;
 use cgroups::subsystems::subsystem::ResourceConfig;
 use clap::{Parser, Subcommand};
 use container::{Container, ContainerInfo, ContainerStatus, ContainerStore};
-use image::{ImageInfo, ImageStore};
+use image::ImageStore;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -211,7 +211,7 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
     };
 
     // Get rootfs path from image
-    let rootfs_path = if let Some(_) = image {
+    let rootfs_path = if image.is_some() {
         match ImageStore::rootfs_path(image_name, image_tag) {
             Ok(path) => path,
             Err(e) => {
@@ -275,8 +275,8 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
     // For non-TTY mode, capture output to log file
     if !tty {
         let log_path = ContainerStore::log_path(&container_name);
-        let mut stdout_opt = parent.stdout.take();
-        let mut stderr_opt = parent.stderr.take();
+        let stdout_opt = parent.stdout.take();
+        let stderr_opt = parent.stderr.take();
 
         use std::fs::File;
         use std::io::{Read, Write};
@@ -313,25 +313,22 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
         }
 
         // Capture stderr - append to same log file
-        if let Some(mut stderr) = stderr_opt {
-            match File::options().create(false).append(true).open(&log_path) {
-                Ok(mut log_file) => {
-                    let handle = spawn(move || {
-                        let mut buffer = [0; 4096];
-                        loop {
-                            match stderr.read(&mut buffer) {
-                                Ok(0) => break,
-                                Ok(n) => {
-                                    let _ = log_file.write_all(&buffer[..n]);
-                                }
-                                Err(_) => break,
-                            }
+        if let Some(mut stderr) = stderr_opt
+            && let Ok(mut log_file) = File::options().create(false).append(true).open(&log_path)
+        {
+            let handle = spawn(move || {
+                let mut buffer = [0; 4096];
+                loop {
+                    match stderr.read(&mut buffer) {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            let _ = log_file.write_all(&buffer[..n]);
                         }
-                    });
-                    handles.push(handle);
+                        Err(_) => break,
+                    }
                 }
-                Err(_) => {}
-            }
+            });
+            handles.push(handle);
         }
 
         // Don't wait for log threads - let them run independently
@@ -355,12 +352,11 @@ fn run(image: Option<&str>, tty: bool, cmd: &str, res: &ResourceConfig) {
     let pwd = std::env::current_dir();
     if let Ok(pwd) = pwd {
         let old_root = pwd.join("busybox").join(".pivot_root");
-        if old_root.exists() {
-            if let Err(e) =
+        if old_root.exists()
+            && let Err(e) =
                 std::fs::remove_dir_all(old_root.as_os_str().to_str().unwrap())
-            {
-                warn!("Failed to remove .pivot_root directory: {}", e);
-            }
+        {
+            warn!("Failed to remove .pivot_root directory: {}", e);
         }
     }
 
@@ -621,11 +617,9 @@ fn exec_container(container_name: &str, command: &str) -> Result<()> {
         let ns_file = File::open(&ns_path)
             .with_context(|| format!("Failed to open namespace {}", ns_name))?;
 
-        unsafe {
-            setns(ns_file.as_raw_fd(), *clone_flag).with_context(|| {
-                format!("Failed to enter {} namespace", ns_name)
-            })?;
-        }
+        setns(ns_file.as_raw_fd(), *clone_flag).with_context(|| {
+            format!("Failed to enter {} namespace", ns_name)
+        })?;
     }
 
     // Execute command in container namespace

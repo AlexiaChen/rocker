@@ -37,11 +37,11 @@ impl Container {
     /// actually, this method be called in the container, this process is first process in the container
     /// The execve system call is more important, and it is this system call that implements the operation that completes the initialization
     /// action and gets the user process up and running.
-
+    ///
     /// First, after creating a container using Docker, you will find that the first process inside the container, the one with PID 1, is the specified foreground process. At this time, if you look through the ps command,
     /// the first process in the container is the process of their own init, you may think, big deal, the first process to kill, but here is another headache, the PID of the process is 1 can not be kill, if the kill off, the container will exit.
     /// Here the execve can make things not so happen.
-
+    ///
     /// What it does is to execute the cmd path passed in by the current init command.
     /// It will overwrite the current process image, data and stack information, including the PID,
     /// which will be overwritten by the process of the cmd program that will be run. In other words, when this system call is called,
@@ -83,17 +83,16 @@ impl Container {
                 CString::new(format!("{}={}", k, v).as_str()).unwrap()
             })
             .collect();
-        let res = execve(path.as_c_str(), &argv, &envs);
-        if let Err(error) = res {
-            return Err(anyhow::anyhow!(
+        execve(path.as_c_str(), &argv, &envs).map_err(|error| {
+            anyhow::anyhow!(
                 "Could not start the program with error: {}",
                 error
-            ));
-        }
+            )
+        })?;
         Ok(())
     }
 
-    fn pivot_root(new_root: &PathBuf) -> Result<()> {
+    fn pivot_root(new_root: &std::path::Path) -> Result<()> {
         mount(
             None::<&str>,
             "/",

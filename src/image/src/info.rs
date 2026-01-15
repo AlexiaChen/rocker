@@ -37,7 +37,8 @@ impl ImageInfo {
 
         let mut hasher = DefaultHasher::new();
         format!("{}:{}", name, tag).hash(&mut hasher);
-        format!("{:012x}", hasher.finish())
+        // Take first 12 characters of the hex hash
+        format!("{:x}", hasher.finish())[..12].to_string()
     }
 
     /// Get current time as formatted string

@@ -44,7 +44,7 @@ impl ImageStore {
         }
 
         // Get tar file size
-        let tar_size = fs::metadata(tar_path)
+        let _tar_size = fs::metadata(tar_path)
             .context("Failed to get tar file metadata")?
             .len();
 

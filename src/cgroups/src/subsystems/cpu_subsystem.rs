@@ -36,7 +36,7 @@ impl Subsystem for CpuSubsystem {
                         // v2: 1-10000, default 100
                         // Approximate conversion: weight = shares / 1024 * 100
                         let shares: u64 = cpu_shares.parse().unwrap_or(1024);
-                        let weight = (shares * 100 / 1024).max(1).min(10000);
+                        let weight = (shares * 100 / 1024).clamp(1, 10000);
                         ("cpu.weight", weight.to_string())
                     } else {
                         ("cpu.shares", cpu_shares.clone())
@@ -148,9 +148,8 @@ mod tests {
                 let shares_file =
                     if is_v2 { "cpu.weight" } else { "cpu.shares" };
                 let path = Path::new(&path).join(shares_file);
-                assert_eq!(
+                assert!(
                     Path::new(&path).exists(),
-                    true,
                     "cpu subsystem cgroup path {} should exist",
                     shares_file
                 );
@@ -165,7 +164,7 @@ mod tests {
                 assert_eq!(contents.trim(), expected);
             }
             Err(e) => {
-                assert!(false, "set cgroup cpu failed {}", e);
+                panic!("set cgroup cpu failed {}", e);
             }
         }
 
@@ -178,9 +177,8 @@ mod tests {
                 // Use appropriate file name based on cgroup version
                 let tasks_file = if is_v2 { "cgroup.procs" } else { "tasks" };
                 let path = Path::new(&path).join(tasks_file);
-                assert_eq!(
+                assert!(
                     Path::new(&path).exists(),
-                    true,
                     "cpu subsystem cgroup path {} should exist",
                     tasks_file
                 );
@@ -214,7 +212,7 @@ mod tests {
                 );
             }
             Err(e) => {
-                assert!(false, "apply cgroup cpu failed {}", e);
+                panic!("apply cgroup cpu failed {}", e);
             }
         }
 
@@ -225,14 +223,13 @@ mod tests {
                     get_cgroup_path(cpu_subsystem.name(), cgroup_path, false)
                         .unwrap();
 
-                assert_eq!(
-                    Path::new(&path).exists(),
-                    false,
+                assert!(
+                    !Path::new(&path).exists(),
                     "cpu subsystem cgroup path should not exist"
                 );
             }
             Err(e) => {
-                assert!(false, "remove cgroup cpu failed {}", e);
+                panic!("remove cgroup cpu failed {}", e);
             }
         }
     }

@@ -106,6 +106,16 @@ pub enum ContainerStatus {
     Exited,
 }
 
+impl std::fmt::Display for ContainerStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContainerStatus::Running => write!(f, "running"),
+            ContainerStatus::Stopped => write!(f, "stopped"),
+            ContainerStatus::Exited => write!(f, "exited"),
+        }
+    }
+}
+
 impl ContainerInfo {
     /// Generate a random 10-digit container ID.
     ///
