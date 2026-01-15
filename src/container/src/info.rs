@@ -1,15 +1,12 @@
 //! Container metadata structures and management.
 //!
-//! This module defines the container information structure that mirrors
-//! MyDocker's ContainerInfo for compatibility and consistency.
-//!
-//! Reference: mydocker/container/container_process.go
+//! This module defines the container information structure.
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Container metadata structure matching MyDocker's ContainerInfo.
+/// Container metadata structure.
 ///
 /// This structure stores all persistent information about a container,
 /// including its process ID, command, status, and configuration.
@@ -90,7 +87,7 @@ pub struct ContainerInfo {
 
 /// Container status enumeration.
 ///
-/// Represents the current state of a container, matching MyDocker's status values.
+/// Represents the current state of a container.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ContainerStatus {
     /// Container is currently running
@@ -119,8 +116,7 @@ impl std::fmt::Display for ContainerStatus {
 impl ContainerInfo {
     /// Generate a random 10-digit container ID.
     ///
-    /// This generates a unique identifier using nanoseconds since Unix epoch,
-    /// matching MyDocker's approach for container ID generation.
+    /// This generates a unique identifier using nanoseconds since Unix epoch.
     ///
     /// # Returns
     ///
@@ -190,7 +186,6 @@ mod tests {
 
     #[test]
     fn test_container_status_serialization() {
-        // Test that status serializes correctly to match MyDocker format
         let running = ContainerStatus::Running;
         let serialized = serde_json::to_string(&running).unwrap();
         assert_eq!(serialized, "\"running\"");

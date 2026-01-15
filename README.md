@@ -23,11 +23,10 @@ Implementation of Docker in Rust. This project demonstrates how container runtim
 - [Architecture](#architecture)
 - [Development](#development)
 - [Documentation](#documentation)
-- [Acknowledgments](#acknowledments)
 
 ## Overview
 
-Rocker is a container runtime that mirrors the functionality of [MyDocker](https://github.com/xianlubird/mydocker), a Docker clone implementation in Go. This project serves as an educational tool for understanding how container runtimes work internally.
+Rocker is a container runtime implemented in Rust. This project demonstrates how container runtimes work by implementing core Docker functionality from scratch.
 
 The project implements container isolation using Linux kernel features:
 - **Namespaces**: For process, filesystem, network, and IPC isolation
@@ -436,12 +435,6 @@ The project follows these conventions:
 - [Linux /proc](doc/linux-proc.md) - /proc filesystem overview
 - [Rocker Tests](doc/rocker-tests.md) - Test examples and verification
 
-### Implementation References
-
-This project is based on concepts from:
-- [MyDocker](https://github.com/xianlubird/mydocker) - Go implementation
-- [自己动手写docker](https://item.jd.com/1003447764572.html) - Book on implementing Docker
-
 ## Roadmap
 
 ### Completed ✅
@@ -510,12 +503,6 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 ## License
 
 This project is licensed under the MIT License.
-
-## Acknowledgments
-
-- [MyDocker](https://github.com/xianlubird/mydocker) - Reference implementation in Go
-- [Linux container documentation](https://www.kernel.org/doc/Documentation/cgroup-v1/)
-- [unshare crate](https://github.com/nicokochmann/unshare-rs) - Namespace operations in Rust
 
 ---
 

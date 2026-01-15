@@ -74,7 +74,7 @@ pub enum ContainerStatus {
 }
 ```
 
-The `serde(rename)` attributes ensure JSON compatibility with the Go-based MyDocker implementation.
+The `serde(rename)` attributes ensure JSON compatibility.
 
 ## Commands
 
@@ -264,8 +264,6 @@ fn list_containers() -> Result<()> {
 }
 ```
 
-**MyDocker Reference:** `mydocker/list.go`
-
 ### rocker logs
 
 Display output from a non-TTY container.
@@ -301,8 +299,6 @@ fn log_container(container_name: &str) -> Result<()> {
 ```
 
 **Note:** Log files are only created for non-TTY containers. TTY containers have their output directed to the terminal.
-
-**MyDocker Reference:** `mydocker/log.go`
 
 ### rocker stop
 
@@ -376,8 +372,6 @@ fn stop_container(container_name: &str) -> Result<()> {
 **Why Clear PID?**
 After stopping, the container process no longer exists. Clearing the PID prevents accidental signal delivery to recycled PIDs.
 
-**MyDocker Reference:** `mydocker/stop.go`
-
 ### rocker rm
 
 Remove a stopped container's metadata.
@@ -423,8 +417,6 @@ fn remove_container(container_name: &str) -> Result<()> {
 - Network endpoints
 
 **Note:** Full cleanup (workspace, network) will be implemented when those modules are complete.
-
-**MyDocker Reference:** `mydocker/main_command.go` (rm command)
 
 ### rocker commit
 
@@ -472,8 +464,6 @@ fn commit_container(container_name: &str, image_name: &str) -> Result<()> {
 - Snapshot container state after modifications
 - Create base images for new containers
 - Backup container filesystems
-
-**MyDocker Reference:** `mydocker/commit.go`
 
 ### rocker exec
 
@@ -607,10 +597,6 @@ sudo rocker exec 1234567890 ls -la /
 sudo rocker exec 1234567890 cat /proc/1/status
 ```
 
-**MyDocker Reference:**
-- `mydocker/exec.go`
-- `mydocker/nsenter/nsenter.go` (CGO implementation)
-
 ## Data Format Examples
 
 ### config.json Example
@@ -639,7 +625,7 @@ pub fn current_time() -> String {
 }
 ```
 
-This format matches the Go `time.Format("2006-01-02 15:04:05")` format used in MyDocker.
+This format uses ISO 8601-like timestamp for human readability.
 
 ## Error Handling
 
@@ -654,16 +640,6 @@ Common errors:
 - **Permission denied**: Not running as root
 - **Invalid PID**: Container process has exited
 - **Cgroup operations failed**: Kernel doesn't support requested cgroup feature
-
-## Comparison with MyDocker
-
-| Feature | MyDocker (Go) | Rocker (Rust) | Notes |
-|---------|---------------|---------------|-------|
-| Metadata format | JSON | JSON | Compatible |
-| Storage location | `/var/run/mydocker/` | `/var/run/rocker/` | Different paths |
-| Namespace entry | CGO + C | `nix` crate | Pure Rust |
-| CLI parser | cobra | clap derive | Modern API |
-| Timestamp format | Go reference | Rust chrono | Same output |
 
 ## Future Enhancements
 
@@ -692,7 +668,6 @@ Planned features for container lifecycle:
 
 ## References
 
-- [MyDocker Container Lifecycle](https://github.com/xianlubird/mydocker)
 - [Linux setns(2) man page](https://man7.org/linux/man-pages/man2/setns.2.html)
 - [Linux Namespaces Overview](https://man7.org/linux/man-pages/man7/namespaces.7.html)
 - [Docker Container Lifecycle](https://docs.docker.com/engine/reference/commandline/cli/)

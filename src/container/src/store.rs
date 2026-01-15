@@ -1,7 +1,6 @@
 //! Container metadata storage and persistence.
 //!
-//! This module handles reading and writing container metadata to disk,
-//! matching MyDocker's storage format for compatibility.
+//! This module handles reading and writing container metadata to disk.
 //!
 //! # Directory Structure
 //!
@@ -10,8 +9,6 @@
 //!   ├── config.json       # Container metadata
 //!   └── container.log     # Container logs (for non-TTY containers)
 //! ```
-//!
-//! Reference: mydocker/run.go (recordContainerInfo, deleteContainerInfo)
 
 use crate::info::ContainerInfo;
 use anyhow::{Context, Result};
@@ -97,7 +94,7 @@ impl ContainerStore {
     pub fn save(info: &ContainerInfo) -> Result<()> {
         let dir_path = Self::container_dir(&info.name);
 
-        // Create directory if it doesn't exist (matching MyDocker's 0622 permissions)
+        // Create directory if it doesn't exist
         fs::create_dir_all(&dir_path).with_context(|| {
             format!("Failed to create directory {}", dir_path.display())
         })?;
